@@ -1,0 +1,23 @@
+[general]
+name=Script Assistant
+description=This plugin helps to reload and test Processing scripts
+about=This plugin moves and overwrites scripts in the default QGIS script location from another directory. Useful for example if you are modifying scripts in a .git repository and want to deploy them.
+version=0.5
+
+qgisMinimumVersion=2.14
+
+author=Land Information New Zealand
+email=dsilk@linz.govt.nz
+
+homepage=fake
+repository=fake
+tracker=fake
+changelog=fake
+
+tags=processing
+
+category=Plugins
+icon=icon.png
+
+experimental=True
+deprecated=False
