@@ -63,18 +63,6 @@ class ScriptAssistant:
         self.dlg_script_folder_config.pushButton.clicked.connect(
             self.loadExistingDirectoryDialog)
 
-        folder_dir = self.loadConfiguredScriptFolder()
-        if not folder_dir:
-            self.reload_scripts_action.setEnabled(False)
-            self.test_scripts_action.setEnabled(False)
-        else:
-            if os.path.join(folder_dir, 'tests') not in sys.path:
-                sys.path.append(os.path.join(folder_dir, 'tests'))
-
-        last_script_tested = self.loadConfiguredTestScript()
-        if not last_script_tested:
-            self.test_scripts_action.setEnabled(False)
-
     def tr(self, message):
         """Get the translation for a string using Qt translation API.
 
@@ -86,6 +74,18 @@ class ScriptAssistant:
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
         self.addReloadToolButton()
         self.addTestToolButton()
+
+        folder_dir = self.loadConfiguredScriptFolder()
+        if not folder_dir:
+            self.reload_scripts_action.setEnabled(False)
+            self.test_scripts_action.setEnabled(False)
+        else:
+            if os.path.join(folder_dir, 'tests') not in sys.path:
+                sys.path.append(os.path.join(folder_dir, 'tests'))
+
+        last_script_tested = self.loadConfiguredTestScript()
+        if not last_script_tested:
+            self.test_scripts_action.setEnabled(False)
 
     def addAction(self, icon_filename, text, callback, tool_button_menu):
         """Creates an action with an icon, assigned to a QToolButton menu."""
