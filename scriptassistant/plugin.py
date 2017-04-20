@@ -77,15 +77,17 @@ class ScriptAssistant:
 
         folder_dir = self.loadConfiguredScriptFolder()
         if not folder_dir:
-            self.reload_scripts_action.setEnabled(False)
-            self.test_scripts_action.setEnabled(False)
+            # self.reload_scripts_action.setEnabled(False)
+            # self.test_scripts_action.setEnabled(False)
+            pass
         else:
             if os.path.join(folder_dir, 'tests') not in sys.path:
                 sys.path.append(os.path.join(folder_dir, 'tests'))
 
         last_script_tested = self.loadConfiguredTestScript()
         if not last_script_tested:
-            self.test_scripts_action.setEnabled(False)
+            # self.test_scripts_action.setEnabled(False)
+            pass
 
     def addAction(self, icon_filename, text, callback, tool_button_menu):
         """Creates an action with an icon, assigned to a QToolButton menu."""
