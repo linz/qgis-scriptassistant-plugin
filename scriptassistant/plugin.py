@@ -76,18 +76,8 @@ class ScriptAssistant:
         self.addTestToolButton()
 
         folder_dir = self.loadConfiguredScriptFolder()
-        if not folder_dir:
-            # self.reload_scripts_action.setEnabled(False)
-            # self.test_scripts_action.setEnabled(False)
-            pass
-        else:
-            if os.path.join(folder_dir, 'tests') not in sys.path:
-                sys.path.append(os.path.join(folder_dir, 'tests'))
-
-        last_script_tested = self.loadConfiguredTestScript()
-        if not last_script_tested:
-            # self.test_scripts_action.setEnabled(False)
-            pass
+        if folder_dir and os.path.join(folder_dir, 'tests') not in sys.path:
+            sys.path.append(os.path.join(folder_dir, 'tests'))
 
     def addAction(self, icon_filename, text, callback, tool_button_menu):
         """Creates an action with an icon, assigned to a QToolButton menu."""
@@ -155,21 +145,31 @@ class ScriptAssistant:
         QGIS scripts folder.
         """
         folder_dir = self.loadConfiguredScriptFolder()
-        for filename in os.listdir(folder_dir):
-            if filename.endswith('.py') and not filename.startswith('_'):
-                # QGIS 2.14 has ScriptUtils.scriptsFolder()
-                if QGis.QGIS_VERSION_INT < 21800:
-                    copy(os.path.join(folder_dir, filename), ScriptUtils.scriptsFolder())
-                # QGIS 2.18 has ScriptUtils.scriptsFolders()[0]
-                elif QGis.QGIS_VERSION_INT >= 21800:
-                    copy(os.path.join(folder_dir, filename), ScriptUtils.scriptsFolders()[0])
-        plugins['processing'].toolbox.updateProvider('script')
+        if folder_dir:
+            for filename in os.listdir(folder_dir):
+                if filename.endswith('.py') and not filename.startswith('_'):
+                    # QGIS 2.14 has ScriptUtils.scriptsFolder()
+                    if QGis.QGIS_VERSION_INT < 21800:
+                        copy(os.path.join(folder_dir, filename), ScriptUtils.scriptsFolder())
+                    # QGIS 2.18 has ScriptUtils.scriptsFolders()[0]
+                    elif QGis.QGIS_VERSION_INT >= 21800:
+                        copy(os.path.join(folder_dir, filename), ScriptUtils.scriptsFolders()[0])
+            plugins['processing'].toolbox.updateProvider('script')
+        else:
+            self.iface.messageBar().pushMessage(
+                self.tr('No Script Folder Configured'),
+                self.tr('Please configure script folder first.'),
+                level=QgsMessageBar.CRITICAL,
+            )
 
     @pyqtSlot()
     def openScriptFolderDialog(self):
         """Opens a dialog that allows the script folder to be configured."""
         self.dlg_script_folder_config.show()
         lne = self.dlg_script_folder_config.lineEdit
+
+        if self.loadConfiguredScriptFolder():
+            lne.setText(self.loadConfiguredScriptFolder())
 
         result = self.dlg_script_folder_config.exec_()
         if result:
@@ -184,18 +184,27 @@ class ScriptAssistant:
         """Run configured test(s) in the QGIS Python Console."""
         self.openPythonConsole()
         script_name = self.loadConfiguredTestScript()
-        if script_name == 'all':
-            cmb = self.dlg_test_script_config.comboBox
-            all_items = [cmb.itemText(i) for i in range(cmb.count())]
-            for test_script_name in all_items:
-                if test_script_name != 'all':
-                    module = import_module('test_{0}'.format(test_script_name))
-                    tests = getattr(module, 'run_tests')
-                    tests()
+        if script_name:
+            if script_name == 'all':
+                cmb = self.dlg_test_script_config.comboBox
+                all_items = [cmb.itemText(i) for i in range(cmb.count())]
+                for test_script_name in all_items:
+                    if test_script_name != 'all':
+                        module = import_module('test_{0}'.format(test_script_name))
+                        tests = getattr(module, 'run_tests')
+                        tests()
+            else:
+                module = import_module('test_{0}'.format(script_name))
+                tests = getattr(module, 'run_tests')
+                tests()
         else:
-            module = import_module('test_{0}'.format(script_name))
-            tests = getattr(module, 'run_tests')
-            tests()
+            # Ideally the button would be disabled, but that isn't possible
+            # with QToolButton without odd workarounds
+            self.iface.messageBar().pushMessage(
+                self.tr('No Test Script Configured'),
+                self.tr('Please configure a script to test first.'),
+                level=QgsMessageBar.CRITICAL,
+            )
 
     @pyqtSlot()
     def openTestScriptDialog(self):
@@ -205,7 +214,7 @@ class ScriptAssistant:
         # Remove any previously added tests
         cmb.clear()
         cmb.addItem('all')
-
+        # Populate combo box with scripts found in the configured folder
         if self.loadConfiguredScriptFolder():
             last_script_folder = self.loadConfiguredScriptFolder()
             test_file_names = [
@@ -218,11 +227,11 @@ class ScriptAssistant:
                 self.tr('Please configure script folder first.'),
                 level=QgsMessageBar.CRITICAL,
             )
-
+        # Dropdown shows most recently configured test if in list
         if self.loadConfiguredTestScript():
             indexOfLastScript = cmb.findText(self.loadConfiguredTestScript())
             cmb.setCurrentIndex(indexOfLastScript)
-
+        # Get result from QButtonBox options, if OK then update
         result = self.dlg_test_script_config.exec_()
         if result:
             self.test_scripts_action.setEnabled(True)
