@@ -173,11 +173,19 @@ class ScriptAssistant:
 
         result = self.dlg_script_folder_config.exec_()
         if result:
-            self.reload_scripts_action.setEnabled(True)
-            self.reload_scripts_action.setText('Reload: {}'.format(lne.text()))
-            self.saveConfiguredScriptFolder(lne.text())
-            if os.path.join(lne.text(), 'tests') not in sys.path:
-                sys.path.append(os.path.join(lne.text(), 'tests'))
+            script_folder = lne.text()
+            if not os.path.exists(script_folder):
+                self.iface.messageBar().pushMessage(
+                    self.tr('Invalid Script Folder Path'),
+                    self.tr('The configured script folder is not a valid path.'),
+                    level=QgsMessageBar.CRITICAL,
+                )
+            else:
+                self.reload_scripts_action.setEnabled(True)
+                self.reload_scripts_action.setText('Reload: {}'.format(script_folder))
+                self.saveConfiguredScriptFolder(script_folder)
+                if os.path.join(script_folder, 'tests') not in sys.path:
+                    sys.path.append(os.path.join(script_folder, 'tests'))
 
     @pyqtSlot()
     def runTest(self):
@@ -241,9 +249,11 @@ class ScriptAssistant:
     @pyqtSlot()
     def loadExistingDirectoryDialog(self):
         """Opens a file browser dialog to allow selection of test directory."""
+        lne = self.dlg_script_folder_config.lineEdit
         directory = QFileDialog.getExistingDirectory(
             QFileDialog(),
-            self.tr('Select script directory...')
+            self.tr('Select script directory...'),
+            lne.text()
         )
         self.dlg_script_folder_config.lineEdit.setText(directory)
 
