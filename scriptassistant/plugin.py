@@ -132,7 +132,7 @@ class ScriptAssistant:
         # Test
         self.test_scripts_action = self.addAction(
             'test_scripts.png', 'Test: {}'.format(script),
-            self.runTest, self.test_script_menu)
+            self.prepareTest, self.test_script_menu)
         self.addAction(
             'configure_test_scripts.png', self.tr('Choose a script to test'),
             self.openTestScriptDialog, self.test_script_menu)
@@ -187,8 +187,16 @@ class ScriptAssistant:
                 if os.path.join(script_folder, 'tests') not in sys.path:
                     sys.path.append(os.path.join(script_folder, 'tests'))
 
+    @staticmethod
+    def runTest(script_name):
+        module = import_module('test_{0}'.format(script_name))
+        # have to reload otherwise a QGIS restart is required after changes
+        reload(module)
+        tests = getattr(module, 'run_tests')
+        tests()
+
     @pyqtSlot()
-    def runTest(self):
+    def prepareTest(self):
         """Run configured test(s) in the QGIS Python Console."""
         self.openPythonConsole()
         script_name = self.loadConfiguredTestScript()
@@ -198,13 +206,9 @@ class ScriptAssistant:
                 all_items = [cmb.itemText(i) for i in range(cmb.count())]
                 for test_script_name in all_items:
                     if test_script_name != 'all':
-                        module = import_module('test_{0}'.format(test_script_name))
-                        tests = getattr(module, 'run_tests')
-                        tests()
+                        self.runTest(test_script_name)
             else:
-                module = import_module('test_{0}'.format(script_name))
-                tests = getattr(module, 'run_tests')
-                tests()
+                self.runTest(script_name)
         else:
             # Ideally the button would be disabled, but that isn't possible
             # with QToolButton without odd workarounds
