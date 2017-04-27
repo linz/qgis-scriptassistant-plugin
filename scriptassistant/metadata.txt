@@ -9,12 +9,12 @@ qgisMinimumVersion=2.14
 author=Land Information New Zealand
 email=dsilk@linz.govt.nz
 
-homepage=fake
-repository=fake
-tracker=fake
-changelog=fake
+homepage=https://github.com/linz/qgis-scriptassistant-plugin
+repository=https://github.com/linz/qgis-scriptassistant-plugin
+tracker=https://github.com/linz/qgis-scriptassistant-plugin/issues
+changelog=https://github.com/linz/qgis-scriptassistant-plugin/blob/master/CHANGELOG.rst
 
-tags=processing
+tags=processing, development, testing
 
 category=Plugins
 icon=icon.png
