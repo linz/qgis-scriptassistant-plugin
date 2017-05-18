@@ -161,7 +161,7 @@ class ScriptAssistant:
             self.reload_scripts_action.setEnabled(False)
 
     def createTestScriptMenu(self):
-        test_folder = os.path.join(__location__, 'tests')
+        test_folder = self.loadSetting('test_folder')
 
         if test_folder and test_folder not in sys.path:
             sys.path.append(test_folder)
@@ -322,12 +322,12 @@ class ScriptAssistant:
         result = self.dlg_settings.exec_()
         if result:
             script_folder = self.dlg_settings.lne_script.text()
+            self.saveSetting('script_folder', script_folder)
             if os.path.exists(script_folder):
-                self.saveSetting('script_folder', script_folder)
                 self.reload_scripts_action.setEnabled(True)
             else:
                 self.reload_scripts_action.setEnabled(False)
-                if not script_folder:
+                if script_folder != '':
                     self.iface.messageBar().pushMessage(
                         self.tr('Invalid Script Folder Path'),
                         self.tr('The configured script folder is not a valid path.'),
@@ -335,8 +335,8 @@ class ScriptAssistant:
                     )
 
             test_folder = self.dlg_settings.lne_test.text()
+            self.saveSetting('test_folder', test_folder)
             if os.path.exists(test_folder):
-                self.saveSetting('test_folder', test_folder)
                 self.test_script_action.setEnabled(True)
                 self.test_all_action.setEnabled(True)
                 if test_folder not in sys.path:
@@ -346,7 +346,7 @@ class ScriptAssistant:
                 self.test_script_action.setEnabled(False)
                 self.test_all_action.setEnabled(False)
                 self.add_test_data_action.setEnabled(False)
-                if not test_folder:
+                if test_folder  != '':
                     self.iface.messageBar().pushMessage(
                         self.tr('Invalid Test Script Path'),
                         self.tr('The configured test script folder is not a valid path.'),
@@ -354,12 +354,12 @@ class ScriptAssistant:
                     )
 
             test_data_folder = self.dlg_settings.lne_test_data.text()
+            self.saveSetting('test_data_folder', test_data_folder)
             if os.path.exists(test_data_folder):
-                self.saveSetting('test_data_folder', test_data_folder)
                 self.add_test_data_action.setEnabled(True)
             else:
                 self.add_test_data_action.setEnabled(False)
-                if not test_data_folder:
+                if test_data_folder != '':
                     self.iface.messageBar().pushMessage(
                         self.tr('Invalid Test Data Path'),
                         self.tr('The configured test data folder is not a valid path.'),
