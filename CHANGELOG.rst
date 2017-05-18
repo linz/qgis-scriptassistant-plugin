@@ -14,6 +14,7 @@ Added
  * Can now save and manage testing configurations via Settings
  * Option to toggle reload()
  * Option to run plugin tests with 1s delay between actions and .repaint
+ * Tests - the plugin tests itself!
 
 Changed
 -------
