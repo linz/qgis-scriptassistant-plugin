@@ -64,12 +64,12 @@ class ScriptAssistantTest(unittest.TestCase):
         self.view(settings_dialog)
         self.assertEquals(settings_dialog.cmb_config.lineEdit().text(), '')
 
-    def test_add_test_data(self):
-        settings_dialog = self.scriptassistant.dlg_settings
-        settings_dialog.lne_test.setText(os.path.join(__location__, 'testdata'))
-        self.view(settings_dialog)
-        self.scriptassistant.prepareTest('$ALL')
-        self.view(settings_dialog)
+    # def test_add_test_data(self):
+    #     settings_dialog = self.scriptassistant.dlg_settings
+    #     settings_dialog.lne_test.setText(os.path.join(__location__, 'testdata'))
+    #     self.view(settings_dialog)
+    #     self.scriptassistant.prepareTest('$ALL')
+    #     self.view(settings_dialog)
 
     def tearDown(self):
         settings_dialog = self.scriptassistant.dlg_settings
