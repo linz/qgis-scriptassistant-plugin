@@ -97,3 +97,9 @@ def run_tests(view_tests=False):
             'Testing was successful.',
             level=QgsMessageBar.SUCCESS,
         )
+    else:
+        iface.messageBar().pushMessage(
+            'Test Failure',
+            'Testing was not successful.',
+            level=QgsMessageBar.CRITICAL,
+        )
