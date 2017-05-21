@@ -21,7 +21,6 @@ from processing.script.ScriptUtils import ScriptUtils
 import resources
 from gui.settings_dialog import SettingsDialog
 
-
 # Get the path for the parent directory of this file.
 __location__ = os.path.realpath(
     os.path.join(os.getcwd(), os.path.dirname(__file__)))
@@ -324,8 +323,10 @@ class ScriptAssistant:
             script_folder = self.dlg_settings.lne_script.text()
             self.saveSetting('script_folder', script_folder)
             if os.path.exists(script_folder):
+                self.reload_scripts_action.setText('Reload: {}'.format(script_folder))
                 self.reload_scripts_action.setEnabled(True)
             else:
+                self.reload_scripts_action.setText('Invalid Script Folder Path')
                 self.reload_scripts_action.setEnabled(False)
                 if script_folder != '':
                     self.iface.messageBar().pushMessage(
@@ -343,10 +344,11 @@ class ScriptAssistant:
                     sys.path.append(test_folder)
                 self.updateTestScriptMenu()
             else:
+                self.test_script_action.setText('Invalid Test Script Path')
                 self.test_script_action.setEnabled(False)
                 self.test_all_action.setEnabled(False)
                 self.add_test_data_action.setEnabled(False)
-                if test_folder  != '':
+                if test_folder != '':
                     self.iface.messageBar().pushMessage(
                         self.tr('Invalid Test Script Path'),
                         self.tr('The configured test script folder is not a valid path.'),
@@ -356,8 +358,10 @@ class ScriptAssistant:
             test_data_folder = self.dlg_settings.lne_test_data.text()
             self.saveSetting('test_data_folder', test_data_folder)
             if os.path.exists(test_data_folder):
+                self.add_test_data_action.setText('Add Test Data From: {}'.format(test_data_folder))
                 self.add_test_data_action.setEnabled(True)
             else:
+                self.add_test_data_action.setText('Invalid Test Data Path')
                 self.add_test_data_action.setEnabled(False)
                 if test_data_folder != '':
                     self.iface.messageBar().pushMessage(
@@ -373,6 +377,10 @@ class ScriptAssistant:
                 )
 
     def runTest(self, test_name):
+        """Import test scripts, run using run_tests method.
+
+        Optionally reload and view depending on settings.
+        """
         module = import_module('test_{0}'.format(test_name))
         # have to reload otherwise a QGIS restart is required after changes
         if self.loadSetting('no_reload') == 'Y':
@@ -387,10 +395,11 @@ class ScriptAssistant:
 
     @pyqtSlot()
     def prepareTest(self, test_name):
-        """Run configured test(s) in the QGIS Python Console."""
+        """Open the QGIS Python Console. Handle testing all tests."""
         self.openPythonConsole()
         # Probably not working
         self.saveSetting('current_test', test_name)
+        self.updateTestScriptMenu()
         if test_name:
             if test_name == '$ALL':
                 test_folder = self.loadSetting('test_folder')
@@ -413,7 +422,9 @@ class ScriptAssistant:
 
     @pyqtSlot()
     def addTestDataToMap(self):
-        """Something"""
+        """Adds test data referred to in the test script to the map. Must
+        be .shp (shapefile).
+        """
         test_data_folder = self.loadSetting('test_data_folder')
         test_folder = self.loadSetting('test_folder')
         current_test = self.loadSetting('current_test')
@@ -520,6 +531,7 @@ class ScriptAssistant:
 
     @staticmethod
     def loadConfiguration():
+        """Load configuration."""
         settings = QSettings()
         size = settings.beginReadArray('script_assistant')
         config = {}
