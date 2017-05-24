@@ -1,7 +1,7 @@
 ============================
 QGIS Script Assistant Plugin
 ============================
-   
+
 .. image:: https://img.shields.io/badge/License-BSD%203--Clause-blue.svg
     :target: https://github.com/linz/qgis-importimage-plugin/blob/master/LICENSE
 

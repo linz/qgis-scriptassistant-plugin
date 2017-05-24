@@ -91,10 +91,6 @@ class ScriptAssistant:
         self.dlg_settings.chk_reload.stateChanged.connect(self.setReload)
         self.dlg_settings.chk_repaint.stateChanged.connect(self.setRepaint)
 
-        self.dlg_settings.show()
-        self.dlg_settings.lne_test.setText(os.path.join(__location__, 'tests'))
-        self.dlg_settings.close()
-
     def tr(self, message):
         """Get the translation for a string using Qt translation API.
 
@@ -108,6 +104,10 @@ class ScriptAssistant:
         self.addTestToolButton()
         self.addTestDataToolButton()
         self.addSettingsAction()
+
+        self.dlg_settings.show()
+        self.dlg_settings.lne_test.setText(os.path.join(__location__, 'tests'))
+        self.dlg_settings.close()
 
     def checkValidConfig(self):
         if os.path.isdir(self.dlg_settings.lne_script.text()) or \
