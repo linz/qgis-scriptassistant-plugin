@@ -561,9 +561,9 @@ class ScriptAssistant:
                 'configuration': settings.value('configuration'),
                 'script_folder': settings.value('script_folder'),
                 'test_data_folder': settings.value('test_data_folder'),
-                'test_folder': settings.value('test_folder')
-                'no_reload': settings.value('no_reload')
-                'view_tests': settings.value('view_tests')
+                'test_folder': settings.value('test_folder'),
+                'no_reload': settings.value('no_reload'),
+                'view_tests': settings.value('view_tests'),
             }
         settings.endArray()
         return config
