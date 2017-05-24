@@ -278,14 +278,14 @@ class ScriptAssistant:
 
     @pyqtSlot()
     def setReload(self):
-        if self.loadSetting('no_reload') == 'N':
+        if self.dlg_settings.chk_reload.isChecked():
             self.saveSetting('no_reload', 'Y')
         else:
             self.saveSetting('no_reload', 'N')
 
     @pyqtSlot()
     def setRepaint(self):
-        if self.loadSetting('view_tests') == 'N':
+        if self.dlg_settings.chk_repaint.isChecked():
             self.saveSetting('view_tests', 'Y')
         else:
             self.saveSetting('view_tests', 'N')
@@ -316,6 +316,14 @@ class ScriptAssistant:
                         self.dlg_settings.lne_script.setText(config[i]['script_folder'])
                         self.dlg_settings.lne_test_data.setText(config[i]['test_data_folder'])
                         self.dlg_settings.lne_test.setText(config[i]['test_folder'])
+                        if config[i]['no_reload'] == 'Y':
+                            self.dlg_settings.chk_reload.setChecked(True)
+                        elif config[i]['no_reload'] == 'N':
+                            self.dlg_settings.chk_reload.setChecked(False)
+                        if config[i]['view_tests'] == 'Y':
+                            self.dlg_settings.chk_repaint.setChecked(True)
+                        elif config[i]['view_tests'] == 'N':
+                            self.dlg_settings.chk_repaint.setChecked(False)
                         break
 
         result = self.dlg_settings.exec_()
@@ -469,6 +477,14 @@ class ScriptAssistant:
     def saveConfiguration(self):
         """Save configuration (overwrite if config name already exists)."""
         new_config = self.dlg_settings.cmb_config.lineEdit().text()
+        if self.dlg_settings.chk_reload.isChecked():
+            no_reload_value = 'Y'
+        else:
+            no_reload_value = 'N'
+        if self.dlg_settings.chk_repaint.isChecked():
+            view_tests_value = 'Y'
+        else:
+            view_tests_value = 'N'
 
         # Save to project file
         self.saveSetting('configuration', new_config)
@@ -494,6 +510,8 @@ class ScriptAssistant:
         settings.setValue('script_folder', self.dlg_settings.lne_script.text())
         settings.setValue('test_data_folder', self.dlg_settings.lne_test_data.text())
         settings.setValue('test_folder', self.dlg_settings.lne_test.text())
+        settings.setValue('no_reload', no_reload_value)
+        settings.setValue('view_tests', view_tests_value)
         settings.endArray()
 
         if self.dlg_settings.cmb_config.count() > 0:
@@ -524,6 +542,8 @@ class ScriptAssistant:
             settings.setValue('script_folder', config[item]['script_folder'])
             settings.setValue('test_data_folder', config[item]['test_data_folder'])
             settings.setValue('test_folder', config[item]['test_folder'])
+            settings.setValue('no_reload', config[item]['no_reload'])
+            settings.setValue('view_tests', config[item]['view_tests'])
         settings.endArray()
 
         if self.dlg_settings.cmb_config.count() == 0:
@@ -542,6 +562,8 @@ class ScriptAssistant:
                 'script_folder': settings.value('script_folder'),
                 'test_data_folder': settings.value('test_data_folder'),
                 'test_folder': settings.value('test_folder')
+                'no_reload': settings.value('no_reload')
+                'view_tests': settings.value('view_tests')
             }
         settings.endArray()
         return config
