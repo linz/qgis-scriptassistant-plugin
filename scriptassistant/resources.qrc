@@ -1,8 +1,8 @@
 <RCC>
     <qresource prefix="/plugins/scriptassistant" >
-        <file>images/configure_script_folder.png</file>
-        <file>images/configure_test_scripts.png</file>
+        <file>images/settings.png</file>
         <file>images/reload_scripts.png</file>
         <file>images/test_scripts.png</file>
+        <file>images/add_test_data.png</file>
     </qresource>
 </RCC>

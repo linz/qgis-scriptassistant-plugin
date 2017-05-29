@@ -2,8 +2,10 @@
 
 import os
 import sys
+import re
 from importlib import import_module
 from shutil import copy
+from functools import partial
 
 from PyQt4.QtCore import (pyqtSlot, QSize, QSettings, QTranslator, qVersion,
     QCoreApplication)
@@ -17,9 +19,7 @@ from processing.script.ScriptUtils import ScriptUtils
 
 # Initialize Qt resources from file resources.py
 import resources
-from gui.script_folder import ConfigureScriptFolderDialog
-from gui.test_script import ConfigureTestScriptDialog
-
+from gui.settings_dialog import SettingsDialog
 
 # Get the path for the parent directory of this file.
 __location__ = os.path.realpath(
@@ -49,19 +49,47 @@ class ScriptAssistant:
         # Initialise plugin toolbar
         self.toolbar = self.iface.addToolBar(u'Script Assistant')
         self.toolbar.setObjectName(u'Script Assistant')
-        self.test_script_menu = QMenu(self.toolbar)
+
         self.reload_scripts_menu = QMenu(self.toolbar)
+        self.test_script_menu = QMenu(self.toolbar)
+        self.add_test_data_menu = QMenu(self.toolbar)
+
+        self.test_script_menu.aboutToShow.connect(self.updateTestScriptMenu)
+
         self.actions = []
 
         # Initialise QGIS menu item
         self.menu = self.tr(u'&Script Assistant')
 
         # Initialise plugin dialogs
-        self.dlg_test_script_config = ConfigureTestScriptDialog()
-        self.dlg_script_folder_config = ConfigureScriptFolderDialog()
+        self.dlg_settings = SettingsDialog()
 
-        self.dlg_script_folder_config.pushButton.clicked.connect(
-            self.loadExistingDirectoryDialog)
+        self.dlg_settings.btn_save.setEnabled(False)
+        self.dlg_settings.btn_delete.setEnabled(False)
+
+        self.dlg_settings.cmb_config.currentIndexChanged.connect(
+            self.loadConfiguration)
+        self.dlg_settings.btn_save.clicked.connect(
+            self.saveConfiguration)
+        self.dlg_settings.btn_delete.clicked.connect(
+            self.deleteConfiguration)
+
+        self.dlg_settings.btn_script.clicked.connect(partial(
+            self.loadExistingDirectoryDialog, self.dlg_settings.lne_script))
+        self.dlg_settings.btn_test_data.clicked.connect(partial(
+            self.loadExistingDirectoryDialog, self.dlg_settings.lne_test_data))
+        self.dlg_settings.btn_test.clicked.connect(partial(
+            self.loadExistingDirectoryDialog, self.dlg_settings.lne_test))
+
+        self.dlg_settings.lne_script.textChanged.connect(self.checkValidConfig)
+        self.dlg_settings.lne_script.textEdited.connect(self.checkValidConfig)
+        self.dlg_settings.lne_test.textChanged.connect(self.checkValidConfig)
+        self.dlg_settings.lne_test.textEdited.connect(self.checkValidConfig)
+        self.dlg_settings.lne_test_data.textChanged.connect(self.checkValidConfig)
+        self.dlg_settings.lne_test_data.textEdited.connect(self.checkValidConfig)
+
+        self.dlg_settings.chk_reload.stateChanged.connect(self.setReload)
+        self.dlg_settings.chk_repaint.stateChanged.connect(self.setRepaint)
 
     def tr(self, message):
         """Get the translation for a string using Qt translation API.
@@ -74,19 +102,28 @@ class ScriptAssistant:
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
         self.addReloadToolButton()
         self.addTestToolButton()
+        self.addTestDataToolButton()
+        self.addSettingsAction()
 
-        folder_dir = self.loadConfiguredScriptFolder()
-        if folder_dir and os.path.join(folder_dir, 'tests') not in sys.path:
-            sys.path.append(os.path.join(folder_dir, 'tests'))
+        self.dlg_settings.show()
+        self.dlg_settings.lne_test.setText(os.path.join(__location__, 'tests'))
+        self.dlg_settings.close()
 
-    def addAction(self, icon_filename, text, callback, tool_button_menu):
+    def checkValidConfig(self):
+        if os.path.isdir(self.dlg_settings.lne_script.text()) or \
+                os.path.isdir(self.dlg_settings.lne_test_data.text()) or \
+                os.path.isdir(self.dlg_settings.lne_test.text()):
+            self.dlg_settings.btn_save.setEnabled(True)
+        else:
+            self.dlg_settings.btn_save.setEnabled(False)
+
+    def addAction(self, icon_filename, text, callback):
         """Creates an action with an icon, assigned to a QToolButton menu."""
         icon_path = os.path.join(self.image_dir, icon_filename)
         icon = QIcon()
         icon.addFile(icon_path, QSize(8, 8))
         action = QAction(icon, text, self.toolbar)
         action.triggered.connect(callback)
-        tool_button_menu.addAction(action)
         self.iface.addPluginToMenu(self.menu, action)
         self.actions.append(action)
         return action
@@ -99,44 +136,120 @@ class ScriptAssistant:
         tool_button.setDefaultAction(tool_button_menu.actions()[0])
         tool_button.setPopupMode(QToolButton.MenuButtonPopup)
         self.toolbar.addWidget(tool_button)
+        return tool_button
+
+    def updateTestScriptMenu(self):
+        self.test_script_menu.clear()
+        self.createTestScriptMenu()
+        self.test_tool_button.setDefaultAction(self.test_script_action)
 
     def addReloadToolButton(self):
         """
         Creates the actions and tool button required for reloading scripts
         from a folder.
         """
-
-        # if status_tip is not None:
-        #     action.setStatusTip(status_tip)
-        # if whats_this is not None:
-        #    action.setWhatsThis(whats_this)
-
-        directory = self.loadConfiguredScriptFolder()
+        script_folder = self.loadSetting('script_folder')
 
         # Reload
         self.reload_scripts_action = self.addAction(
-            'reload_scripts.png', 'Reload: {}'.format(directory),
-            self.reloadScripts, self.reload_scripts_menu)
-        self.addAction(
-            'configure_script_folder.png', self.tr('Choose a file directory'),
-            self.openScriptFolderDialog, self.reload_scripts_menu)
+            'reload_scripts.png', 'Reload: {}'.format(script_folder), self.reloadScripts)
+        self.reload_scripts_menu.addAction(self.reload_scripts_action)
         self.createToolButton(self.reload_scripts_menu)
+
+        if not script_folder:
+            self.reload_scripts_action.setEnabled(False)
+
+    def createTestScriptMenu(self):
+        test_folder = self.loadSetting('test_folder')
+
+        if test_folder and test_folder not in sys.path:
+            sys.path.append(test_folder)
+
+        self.test_script_action = self.addAction(
+            'test_scripts.png', 'Test: {}'.format(self.loadSetting('current_test')),
+            partial(self.prepareTest, self.loadSetting('current_test'))
+        )
+        self.test_script_menu.addAction(self.test_script_action)
+        self.test_all_action = self.addAction(
+            'test_scripts.png', 'all in: {}'.format(test_folder),
+            partial(self.prepareTest, '$ALL')
+        )
+        self.test_script_menu.addAction(self.test_all_action)
+
+        if test_folder:
+            test_file_names = [
+                f[5:-3] for f in os.listdir(test_folder) if
+                f.startswith('test_') and f.endswith('.py')
+            ]
+            for test_name in test_file_names:
+                action = self.addAction(
+                    'test_scripts.png', test_name,
+                    partial(self.prepareTest, test_name)
+                )
+                self.test_script_menu.addAction(action)
+
+            if not self.loadSetting('current_test') in test_file_names:
+                self.saveSetting('current_test', '$ALL')
+                self.test_script_action.setText('Test: all')
+
+        if not test_folder:
+            self.test_script_action.setEnabled(False)
+            self.test_all_action.setEnabled(False)
 
     def addTestToolButton(self):
         """
         Creates the actions and tool button required for running tests
         within QGIS.
         """
-        script = self.loadConfiguredTestScript()
+        self.createTestScriptMenu()
+        self.test_tool_button = self.createToolButton(self.test_script_menu)
+        self.test_tool_button.setDefaultAction(self.test_script_action)
 
-        # Test
-        self.test_scripts_action = self.addAction(
-            'test_scripts.png', 'Test: {}'.format(script),
-            self.runTest, self.test_script_menu)
-        self.addAction(
-            'configure_test_scripts.png', self.tr('Choose a script to test'),
-            self.openTestScriptDialog, self.test_script_menu)
-        self.createToolButton(self.test_script_menu)
+    def addTestDataToolButton(self):
+        """
+        Creates the actions and tool button required for adding test data.
+        """
+
+        test_data_folder = self.loadSetting('test_data_folder')
+
+        # Reload
+        self.add_test_data_action = self.addAction(
+            'add_test_data.png', 'Add Test Data From: {}'.format(test_data_folder),
+            self.addTestDataToMap
+        )
+        self.add_test_data_menu.addAction(self.add_test_data_action)
+        self.createToolButton(self.add_test_data_menu)
+
+        if not test_data_folder:
+            self.add_test_data_action.setEnabled(False)
+
+    def addSettingsAction(self):
+        """
+        Creates the actions and tool button required for running tests
+        within QGIS.
+        """
+        self.settings_action = self.addAction(
+            'settings.png', 'Open Script Assistant Settings',
+            self.openSettingsDialog
+        )
+        self.toolbar.addAction(self.settings_action)
+
+    @staticmethod
+    def isProcessingScript(filename):
+        """
+        Find the first non-blank line of the python file and ensure that it
+        contains ##something that looks like a processing script.
+        """
+        with open(filename) as lines:
+            line = lines.readline()
+            while line != '':
+                if line.startswith('##'):
+                    if line.startswith('## ') or line.startswith('###'):
+                        return False
+                    else:
+                        return True
+                else:
+                    return False
 
     @pyqtSlot()
     def reloadScripts(self):
@@ -144,16 +257,17 @@ class ScriptAssistant:
         Copies and overwrites scripts from the configured folder to the
         QGIS scripts folder.
         """
-        folder_dir = self.loadConfiguredScriptFolder()
+        folder_dir = self.loadSetting('script_folder')
         if folder_dir:
             for filename in os.listdir(folder_dir):
                 if filename.endswith('.py') and not filename.startswith('_'):
-                    # QGIS 2.14 has ScriptUtils.scriptsFolder()
-                    if QGis.QGIS_VERSION_INT < 21800:
-                        copy(os.path.join(folder_dir, filename), ScriptUtils.scriptsFolder())
-                    # QGIS 2.18 has ScriptUtils.scriptsFolders()[0]
-                    elif QGis.QGIS_VERSION_INT >= 21800:
-                        copy(os.path.join(folder_dir, filename), ScriptUtils.scriptsFolders()[0])
+                    if self.isProcessingScript(os.path.join(folder_dir, filename)):
+                        # QGIS 2.14 has ScriptUtils.scriptsFolder()
+                        if QGis.QGIS_VERSION_INT < 21800:
+                            copy(os.path.join(folder_dir, filename), ScriptUtils.scriptsFolder())
+                        # QGIS 2.18 has ScriptUtils.scriptsFolders()[0]
+                        elif QGis.QGIS_VERSION_INT >= 21800:
+                            copy(os.path.join(folder_dir, filename), ScriptUtils.scriptsFolders()[0])
             plugins['processing'].toolbox.updateProvider('script')
         else:
             self.iface.messageBar().pushMessage(
@@ -163,40 +277,156 @@ class ScriptAssistant:
             )
 
     @pyqtSlot()
-    def openScriptFolderDialog(self):
-        """Opens a dialog that allows the script folder to be configured."""
-        self.dlg_script_folder_config.show()
-        lne = self.dlg_script_folder_config.lineEdit
-
-        if self.loadConfiguredScriptFolder():
-            lne.setText(self.loadConfiguredScriptFolder())
-
-        result = self.dlg_script_folder_config.exec_()
-        if result:
-            self.reload_scripts_action.setEnabled(True)
-            self.reload_scripts_action.setText('Reload: {}'.format(lne.text()))
-            self.saveConfiguredScriptFolder(lne.text())
-            if os.path.join(lne.text(), 'tests') not in sys.path:
-                sys.path.append(os.path.join(lne.text(), 'tests'))
+    def setReload(self):
+        if self.dlg_settings.chk_reload.isChecked():
+            self.saveSetting('no_reload', 'Y')
+        else:
+            self.saveSetting('no_reload', 'N')
 
     @pyqtSlot()
-    def runTest(self):
-        """Run configured test(s) in the QGIS Python Console."""
-        self.openPythonConsole()
-        script_name = self.loadConfiguredTestScript()
-        if script_name:
-            if script_name == 'all':
-                cmb = self.dlg_test_script_config.comboBox
-                all_items = [cmb.itemText(i) for i in range(cmb.count())]
-                for test_script_name in all_items:
-                    if test_script_name != 'all':
-                        module = import_module('test_{0}'.format(test_script_name))
-                        tests = getattr(module, 'run_tests')
-                        tests()
+    def setRepaint(self):
+        if self.dlg_settings.chk_repaint.isChecked():
+            self.saveSetting('view_tests', 'Y')
+        else:
+            self.saveSetting('view_tests', 'N')
+
+    @pyqtSlot()
+    def openSettingsDialog(self):
+        self.dlg_settings.show()
+
+        config = self.loadConfiguration()
+        config_names = []
+        for i in config:
+            config_names.append(config[i]['configuration'])
+        if config_names:
+            self.dlg_settings.btn_delete.setEnabled(True)
+            self.dlg_settings.cmb_config.clear()
+            self.dlg_settings.cmb_config.addItems(config_names)
+        else:
+            self.dlg_settings.btn_delete.setEnabled(False)
+
+        if self.loadSetting('current_configuration'):
+            index = self.dlg_settings.cmb_config.findText(
+                self.loadSetting('current_configuration')
+            )
+            if index >= 0:
+                self.dlg_settings.cmb_config.setCurrentIndex(index)
+                for i in config:
+                    if config[i]['configuration'] == self.loadSetting('current_configuration'):
+                        self.dlg_settings.lne_script.setText(config[i]['script_folder'])
+                        self.dlg_settings.lne_test_data.setText(config[i]['test_data_folder'])
+                        self.dlg_settings.lne_test.setText(config[i]['test_folder'])
+                        if config[i]['no_reload'] == 'Y':
+                            self.dlg_settings.chk_reload.setChecked(True)
+                        elif config[i]['no_reload'] == 'N':
+                            self.dlg_settings.chk_reload.setChecked(False)
+                        if config[i]['view_tests'] == 'Y':
+                            self.dlg_settings.chk_repaint.setChecked(True)
+                        elif config[i]['view_tests'] == 'N':
+                            self.dlg_settings.chk_repaint.setChecked(False)
+                        break
+
+        result = self.dlg_settings.exec_()
+        if result:
+            script_folder = self.dlg_settings.lne_script.text()
+            self.saveSetting('script_folder', script_folder)
+            if os.path.exists(script_folder):
+                self.reload_scripts_action.setText('Reload: {}'.format(script_folder))
+                self.reload_scripts_action.setEnabled(True)
             else:
-                module = import_module('test_{0}'.format(script_name))
-                tests = getattr(module, 'run_tests')
-                tests()
+                self.reload_scripts_action.setText('Invalid Script Folder Path')
+                self.reload_scripts_action.setEnabled(False)
+                if script_folder != '':
+                    self.iface.messageBar().pushMessage(
+                        self.tr('Invalid Script Folder Path'),
+                        self.tr('The configured script folder is not a valid path.'),
+                        level=QgsMessageBar.CRITICAL,
+                    )
+
+            test_folder = self.dlg_settings.lne_test.text()
+            self.saveSetting('test_folder', test_folder)
+            if os.path.exists(test_folder):
+                self.test_script_action.setEnabled(True)
+                self.test_all_action.setEnabled(True)
+                if test_folder not in sys.path:
+                    sys.path.append(test_folder)
+                self.updateTestScriptMenu()
+            else:
+                self.test_script_action.setText('Invalid Test Script Path')
+                self.test_script_action.setEnabled(False)
+                self.test_all_action.setEnabled(False)
+                self.add_test_data_action.setEnabled(False)
+                if test_folder != '':
+                    self.iface.messageBar().pushMessage(
+                        self.tr('Invalid Test Script Path'),
+                        self.tr('The configured test script folder is not a valid path.'),
+                        level=QgsMessageBar.CRITICAL,
+                    )
+
+            test_data_folder = self.dlg_settings.lne_test_data.text()
+            self.saveSetting('test_data_folder', test_data_folder)
+            if os.path.exists(test_data_folder):
+                self.add_test_data_action.setText('Add Test Data From: {}'.format(test_data_folder))
+                self.add_test_data_action.setEnabled(True)
+            else:
+                self.add_test_data_action.setText('Invalid Test Data Path')
+                self.add_test_data_action.setEnabled(False)
+                if test_data_folder != '':
+                    self.iface.messageBar().pushMessage(
+                        self.tr('Invalid Test Data Path'),
+                        self.tr('The configured test data folder is not a valid path.'),
+                        level=QgsMessageBar.CRITICAL,
+                    )
+
+            if self.dlg_settings.cmb_config.lineEdit().text():
+                self.saveSetting(
+                    'current_configuration',
+                    self.dlg_settings.cmb_config.lineEdit().text()
+                )
+
+    def runTest(self, test_name):
+        """Import test scripts, run using run_tests method.
+
+        Optionally reload and view depending on settings.
+        """
+        module = import_module('test_{0}'.format(test_name))
+        # have to reload otherwise a QGIS restart is required after changes
+        if self.loadSetting('no_reload') == 'Y':
+            pass
+        else:
+            reload(module)
+        run_tests = getattr(module, 'run_tests')
+        if self.loadSetting('view_tests') == 'Y':
+            try:
+                run_tests(view_tests=True)
+            except TypeError:
+                self.iface.messageBar().pushMessage(
+                    self.tr('Could Not Repaint Widgets'),
+                    self.tr("Tests configured to repaint widgets, but test script doesn't support this."),
+                    level=QgsMessageBar.INFO,
+                )
+                run_tests()
+        else:
+            run_tests()
+
+    @pyqtSlot()
+    def prepareTest(self, test_name):
+        """Open the QGIS Python Console. Handle testing all tests."""
+        self.openPythonConsole()
+        # Probably not working
+        self.saveSetting('current_test', test_name)
+        self.updateTestScriptMenu()
+        if test_name:
+            if test_name == '$ALL':
+                test_folder = self.loadSetting('test_folder')
+                test_file_names = [
+                    f[5:-3] for f in os.listdir(test_folder) if
+                    f.startswith('test_') and f.endswith('.py')
+                ]
+                for actual_test_name in test_file_names:
+                    self.runTest(actual_test_name)
+            else:
+                self.runTest(test_name)
         else:
             # Ideally the button would be disabled, but that isn't possible
             # with QToolButton without odd workarounds
@@ -207,45 +437,33 @@ class ScriptAssistant:
             )
 
     @pyqtSlot()
-    def openTestScriptDialog(self):
-        """Open a dialog that allows tests to be configured."""
-        self.dlg_test_script_config.show()
-        cmb = self.dlg_test_script_config.comboBox
-        # Remove any previously added tests
-        cmb.clear()
-        cmb.addItem('all')
-        # Populate combo box with scripts found in the configured folder
-        if self.loadConfiguredScriptFolder():
-            last_script_folder = self.loadConfiguredScriptFolder()
-            test_file_names = [
-                f[5:-3] for f in os.listdir(os.path.join(last_script_folder, 'tests')) if \
-                f.startswith('test_') and f.endswith('.py')]
-            cmb.addItems(test_file_names)
-        else:
-            self.iface.messageBar().pushMessage(
-                self.tr('No Scripts in Settings'),
-                self.tr('Please configure script folder first.'),
-                level=QgsMessageBar.CRITICAL,
+    def addTestDataToMap(self):
+        """Adds test data referred to in the test script to the map. Must
+        be .shp (shapefile).
+        """
+        test_data_folder = self.loadSetting('test_data_folder')
+        test_folder = self.loadSetting('test_folder')
+        current_test = self.loadSetting('current_test')
+        test_file = open(os.path.join(test_folder, 'test_{}.py'.format(current_test)), 'r')
+        test_text = test_file.read()
+        test_file.close()
+        matches = re.findall(r'\/(.*).shp', test_text)
+        for match in matches:
+            iface.addVectorLayer(
+                os.path.join(test_data_folder, '{}.shp'.format(match)),
+                match, 'ogr'
             )
-        # Dropdown shows most recently configured test if in list
-        if self.loadConfiguredTestScript():
-            indexOfLastScript = cmb.findText(self.loadConfiguredTestScript())
-            cmb.setCurrentIndex(indexOfLastScript)
-        # Get result from QButtonBox options, if OK then update
-        result = self.dlg_test_script_config.exec_()
-        if result:
-            self.test_scripts_action.setEnabled(True)
-            self.test_scripts_action.setText('Test: {}'.format(cmb.currentText()))
-            self.saveConfiguredTestScript(cmb.currentText())
 
     @pyqtSlot()
-    def loadExistingDirectoryDialog(self):
-        """Opens a file browser dialog to allow selection of test directory."""
+    def loadExistingDirectoryDialog(self, line_edit):
+        """Opens a file browser dialog to allow selection of a directory."""
         directory = QFileDialog.getExistingDirectory(
             QFileDialog(),
-            self.tr('Select script directory...')
+            self.tr('Select directory...'),
+            line_edit.text()
         )
-        self.dlg_script_folder_config.lineEdit.setText(directory)
+        if directory:
+            line_edit.setText(directory)
 
     @staticmethod
     def openPythonConsole():
@@ -263,53 +481,118 @@ class ScriptAssistant:
             # so we only use it when we know that is is closed
             iface.actionShowPythonDialog().trigger()
 
-    @staticmethod
-    def loadConfiguredTestScript():
-        """Load the most recently configured test script.
+    @pyqtSlot()
+    def saveConfiguration(self):
+        """Save configuration (overwrite if config name already exists)."""
+        new_config = self.dlg_settings.cmb_config.lineEdit().text()
+        if self.dlg_settings.chk_reload.isChecked():
+            no_reload_value = 'Y'
+        else:
+            no_reload_value = 'N'
+        if self.dlg_settings.chk_repaint.isChecked():
+            view_tests_value = 'Y'
+        else:
+            view_tests_value = 'N'
 
-        Check the QGIS Project file first and then QSettings.
-        """
-        proj = QgsProject.instance()
-        last_script_tested = proj.readEntry('script_assistant', 'last_script_tested')[0]
-        if not last_script_tested:
-            settings = QSettings()
-            last_script_tested = settings.value('script_assistant/last_script_tested')
-        return last_script_tested
+        # Save to project file
+        self.saveSetting('configuration', new_config)
+        self.dlg_settings.cmb_config.addItem(new_config)
 
-    @staticmethod
-    def saveConfiguredTestScript(last_script_tested):
-        """Save the configured test script.
-
-        The script name is saved with the QGIS Project file and in QSettings.
-        """
-        proj = QgsProject.instance()
-        proj.writeEntry('script_assistant', 'last_script_tested', last_script_tested)
+        # Save to system
         settings = QSettings()
-        settings.setValue('script_assistant/last_script_tested', last_script_tested)
+        # First get the current size of the config array in QSettings.
+        size = settings.beginReadArray('script_assistant')
+        # Check if the config already exists. If it does, overwrite it.
+        for i in xrange(size):
+            settings.setArrayIndex(i)
+            if settings.value('configuration') == new_config:
+                config_index = i
+                break
+        else:  # no break
+            config_index = size
+        settings.endArray()
+        # Now create new entry / overwrite (depending on index value).
+        settings.beginWriteArray('script_assistant')
+        settings.setArrayIndex(config_index)
+        settings.setValue('configuration', new_config)
+        settings.setValue('script_folder', self.dlg_settings.lne_script.text())
+        settings.setValue('test_data_folder', self.dlg_settings.lne_test_data.text())
+        settings.setValue('test_folder', self.dlg_settings.lne_test.text())
+        settings.setValue('no_reload', no_reload_value)
+        settings.setValue('view_tests', view_tests_value)
+        settings.endArray()
 
-    @staticmethod
-    def loadConfiguredScriptFolder():
-        """Load the most recently configured script folder.
+        if self.dlg_settings.cmb_config.count() > 0:
+            self.dlg_settings.btn_delete.setEnabled(True)
 
-        Check the QGIS Project file first and then QSettings.
-        """
-        proj = QgsProject.instance()
-        last_script_folder = proj.readEntry('script_assistant', 'last_script_folder')[0]
-        if not last_script_folder:
-            settings = QSettings()
-            last_script_folder = settings.value('script_assistant/last_script_folder')
-        return last_script_folder
+    @pyqtSlot()
+    def deleteConfiguration(self):
+        """Remove configuration."""
+        config = self.loadConfiguration()
+        delete_config = self.dlg_settings.cmb_config.lineEdit().text()
+        for i in config:
+            if config[i]['configuration'] == delete_config:
+                del_i = i
+                break
+        config.pop(del_i)
 
-    @staticmethod
-    def saveConfiguredScriptFolder(last_script_folder):
-        """Save the configured script folder.
+        self.dlg_settings.cmb_config.removeItem(self.dlg_settings.cmb_config.currentIndex())
 
-        The script folder is saved with the QGIS Project file and in QSettings.
-        """
-        proj = QgsProject.instance()
-        proj.writeEntry('script_assistant', 'last_script_folder', last_script_folder)
         settings = QSettings()
-        settings.setValue('script_assistant/last_script_folder', last_script_folder)
+        settings.beginGroup('script_assistant')
+        settings.remove('')
+        settings.endGroup()
+
+        settings.beginWriteArray('script_assistant')
+        for i, item in enumerate(config):
+            settings.setArrayIndex(i)
+            settings.setValue('configuration', config[item]['configuration'])
+            settings.setValue('script_folder', config[item]['script_folder'])
+            settings.setValue('test_data_folder', config[item]['test_data_folder'])
+            settings.setValue('test_folder', config[item]['test_folder'])
+            settings.setValue('no_reload', config[item]['no_reload'])
+            settings.setValue('view_tests', config[item]['view_tests'])
+        settings.endArray()
+
+        if self.dlg_settings.cmb_config.count() == 0:
+            self.dlg_settings.btn_delete.setEnabled(False)
+
+    @staticmethod
+    def loadConfiguration():
+        """Load configuration."""
+        settings = QSettings()
+        size = settings.beginReadArray('script_assistant')
+        config = {}
+        for i in xrange(size):
+            settings.setArrayIndex(i)
+            config[i] = {
+                'configuration': settings.value('configuration'),
+                'script_folder': settings.value('script_folder'),
+                'test_data_folder': settings.value('test_data_folder'),
+                'test_folder': settings.value('test_folder'),
+                'no_reload': settings.value('no_reload'),
+                'view_tests': settings.value('view_tests'),
+            }
+        settings.endArray()
+        return config
+
+    @staticmethod
+    def saveSetting(setting_name, setting_value):
+        """Save a setting to the project file and system."""
+        proj = QgsProject.instance()
+        proj.writeEntry('script_assistant', setting_name, setting_value)
+        settings = QSettings()
+        settings.setValue('script_assistant/{}'.format(setting_name), setting_value)
+
+    @staticmethod
+    def loadSetting(setting_name):
+        """Load a setting from the project file or system."""
+        proj = QgsProject.instance()
+        setting = proj.readEntry('script_assistant', setting_name)[0]
+        if not setting:
+            settings = QSettings()
+            setting = settings.value('script_assistant/{}'.format(setting_name))
+        return setting
 
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
