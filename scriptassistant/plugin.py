@@ -397,7 +397,15 @@ class ScriptAssistant:
             reload(module)
         run_tests = getattr(module, 'run_tests')
         if self.loadSetting('view_tests') == 'Y':
-            run_tests(view_tests=True)
+            try:
+                run_tests(view_tests=True)
+            except TypeError:
+                self.iface.messageBar().pushMessage(
+                    self.tr('Could Not Repaint Widgets'),
+                    self.tr("Tests configured to repaint widgets, but test script doesn't support this."),
+                    level=QgsMessageBar.INFO,
+                )
+                run_tests()
         else:
             run_tests()
 
