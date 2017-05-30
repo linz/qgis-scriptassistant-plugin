@@ -245,12 +245,26 @@
    <item row="14" column="0">
     <widget class="QCheckBox" name="chk_repaint">
      <property name="text">
-      <string>Repaint widgets between tests</string>
+      <string>Play UI tests in slow motion</string>
      </property>
     </widget>
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>cmb_config</tabstop>
+  <tabstop>btn_save</tabstop>
+  <tabstop>btn_delete</tabstop>
+  <tabstop>lne_script</tabstop>
+  <tabstop>btn_script</tabstop>
+  <tabstop>lne_test</tabstop>
+  <tabstop>btn_test</tabstop>
+  <tabstop>lne_test_data</tabstop>
+  <tabstop>btn_test_data</tabstop>
+  <tabstop>chk_reload</tabstop>
+  <tabstop>chk_repaint</tabstop>
+  <tabstop>button_box</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>
