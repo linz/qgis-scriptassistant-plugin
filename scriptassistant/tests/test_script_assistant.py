@@ -5,9 +5,6 @@ import sys
 import time
 import unittest
 
-from PyQt4.QtCore import Qt, QModelIndex
-from PyQt4.QtGui import QKeyEvent, QItemSelectionModel, QKeySequence
-from qgis.core import QgsFeatureRequest, QgsGeometry
 from qgis.gui import QgsMessageBar
 from qgis.utils import plugins, iface
 
@@ -23,7 +20,7 @@ class ScriptAssistantTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Runs at TestCase init."""
-        cls.scriptassistant = plugins.get('scriptassistant')
+        cls.scriptassistant = plugins.get("scriptassistant")
 
     # @classmethod
     # def tearDownClass(cls):
@@ -46,23 +43,23 @@ class ScriptAssistantTest(unittest.TestCase):
         settings_dialog.show()
         self.view(settings_dialog)
         self.assertFalse(settings_dialog.btn_delete.isEnabled())
-        settings_dialog.lne_script.setText(os.path.join(__location__, 'testdata'))
+        settings_dialog.lne_script.setText(os.path.join(__location__, "testdata"))
         self.view(settings_dialog)
-        settings_dialog.lne_test_data.setText(os.path.join(__location__, 'testdata'))
+        settings_dialog.lne_test_data.setText(os.path.join(__location__, "testdata"))
         self.view(settings_dialog)
         self.assertTrue(settings_dialog.btn_save.isEnabled())
-        settings_dialog.cmb_config.lineEdit().setText('Script Assistant')
+        settings_dialog.cmb_config.lineEdit().setText("Script Assistant")
         self.view(settings_dialog)
         settings_dialog.btn_save.clicked.emit(True)
         self.view(settings_dialog)
         settings_dialog.close()
         settings_dialog.show()
         self.view(settings_dialog)
-        self.assertEquals(settings_dialog.cmb_config.lineEdit().text(), 'Script Assistant')
+        self.assertEquals(settings_dialog.cmb_config.lineEdit().text(), "Script Assistant")
         self.view(settings_dialog)
         settings_dialog.btn_delete.clicked.emit(True)
         self.view(settings_dialog)
-        self.assertEquals(settings_dialog.cmb_config.lineEdit().text(), '')
+        self.assertEquals(settings_dialog.cmb_config.lineEdit().text(), "")
 
     # def test_add_test_data(self):
     #     settings_dialog = self.scriptassistant.dlg_settings
@@ -75,9 +72,9 @@ class ScriptAssistantTest(unittest.TestCase):
         settings_dialog = self.scriptassistant.dlg_settings
         while settings_dialog.btn_delete.isEnabled():
             settings_dialog.btn_delete.clicked.emit(True)
-        settings_dialog.lne_script.setText('')
+        settings_dialog.lne_script.setText("")
         settings_dialog.lne_test.setText(__location__)
-        settings_dialog.lne_test_data.setText('')
+        settings_dialog.lne_test_data.setText("")
         self.view(settings_dialog)
         settings_dialog.close()
 
@@ -89,17 +86,17 @@ def run_tests(view_tests=False):
     else:
         view_tests_during_execution = False
     suite = unittest.TestSuite()
-    suite.addTests(unittest.makeSuite(ScriptAssistantTest, 'test'))
+    suite.addTests(unittest.makeSuite(ScriptAssistantTest, "test"))
     result = unittest.TextTestRunner(verbosity=2, stream=sys.stdout).run(suite)
     if result.wasSuccessful():
         iface.messageBar().pushMessage(
-            'All Tests Passed',
-            'Testing was successful.',
+            "All Tests Passed",
+            "Testing was successful.",
             level=QgsMessageBar.SUCCESS,
         )
     else:
         iface.messageBar().pushMessage(
-            'Test Failure',
-            'Testing was not successful.',
+            "Test Failure",
+            "Testing was not successful.",
             level=QgsMessageBar.CRITICAL,
         )

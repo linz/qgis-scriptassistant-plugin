@@ -4,9 +4,6 @@ import os
 import sys
 import unittest
 
-from PyQt4.QtCore import Qt, QModelIndex
-from PyQt4.QtGui import QKeyEvent, QItemSelectionModel, QKeySequence
-from qgis.core import QgsFeatureRequest, QgsGeometry
 from qgis.utils import plugins
 
 from scriptassistant.plugin import ScriptAssistant
@@ -20,7 +17,7 @@ class QGISTest(unittest.TestCase):
 
     def setUp(self):
         """Runs before each test."""
-        self.scriptassistant = plugins.get('scriptassistant')
+        self.scriptassistant = plugins.get("scriptassistant")
 
     def test_plugin(self):
         self.assertIsInstance(self.scriptassistant, ScriptAssistant)
@@ -28,5 +25,5 @@ class QGISTest(unittest.TestCase):
 
 def run_tests():
     suite = unittest.TestSuite()
-    suite.addTests(unittest.makeSuite(QGISTest, 'test'))
+    suite.addTests(unittest.makeSuite(QGISTest, "test"))
     unittest.TextTestRunner(verbosity=2, stream=sys.stdout).run(suite)
