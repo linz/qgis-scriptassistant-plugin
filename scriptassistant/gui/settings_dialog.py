@@ -25,8 +25,8 @@ class SettingsDialog(QDialog, FORM_CLASS):
         self.btn_save.setEnabled(False)
         self.btn_delete.setEnabled(False)
 
-        self.btn_save.clicked.connect(self.saveConfiguration)
-        self.btn_delete.clicked.connect(self.deleteConfiguration)
+        self.btn_save.clicked.connect(self.save_configuration)
+        self.btn_delete.clicked.connect(self.delete_configuration)
         self.cmb_config.currentIndexChanged.connect(self.load_configuration)
 
         self.btn_script.clicked.connect(partial(
@@ -47,7 +47,7 @@ class SettingsDialog(QDialog, FORM_CLASS):
         self.chk_repaint.stateChanged.connect(self.set_repaint)
 
     @pyqtSlot()
-    def saveConfiguration(self):
+    def save_configuration(self):
         """Save configuration (overwrite if config name already exists)."""
         new_config = self.cmb_config.lineEdit().text()
         if self.chk_reload.isChecked():
@@ -91,7 +91,7 @@ class SettingsDialog(QDialog, FORM_CLASS):
             self.btn_delete.setEnabled(True)
 
     @pyqtSlot()
-    def deleteConfiguration(self):
+    def delete_configuration(self):
         """Remove configuration."""
         config = self.load_configuration()
         delete_config = self.cmb_config.lineEdit().text()
