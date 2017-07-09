@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
-import os.path
+import os
 from functools import partial
 
 from PyQt4 import uic
 from PyQt4.QtGui import QDialog, QFileDialog
 from PyQt4.QtCore import pyqtSignal, pyqtSlot, QSettings
+from qgis.core import QgsApplication
 
 import settings_manager
 
@@ -27,7 +28,7 @@ class SettingsDialog(QDialog, FORM_CLASS):
 
         self.btn_save.clicked.connect(self.save_configuration)
         self.btn_delete.clicked.connect(self.delete_configuration)
-        self.cmb_config.currentIndexChanged.connect(self.load_configuration)
+        self.cmb_config.currentIndexChanged.connect(self.show_configuration)
 
         self.btn_script.clicked.connect(partial(
             self.load_existing_directory_dialog, self.lne_script))
@@ -60,11 +61,15 @@ class SettingsDialog(QDialog, FORM_CLASS):
             view_tests_value = "N"
 
         # Save to project file
-        settings_manager.save_setting("configuration", new_config)
-        self.cmb_config.addItem(new_config)
+        config_names = [self.cmb_config.itemText(i) for i in range(self.cmb_config.count())]
+        if new_config not in config_names:
+            self.cmb_config.addItem(new_config)
 
         # Save to system
-        settings = QSettings()
+        settings = QSettings(
+            os.path.join(QgsApplication.qgisSettingsDirPath(), "scriptassistant", "config.ini"),
+            QSettings.IniFormat,
+        )
         # First get the current size of the config array in QSettings.
         size = settings.beginReadArray("script_assistant")
         # Check if the config already exists. If it does, overwrite it.
@@ -103,7 +108,10 @@ class SettingsDialog(QDialog, FORM_CLASS):
 
         self.cmb_config.removeItem(self.cmb_config.currentIndex())
 
-        settings = QSettings()
+        settings = QSettings(
+            os.path.join(QgsApplication.qgisSettingsDirPath(), "scriptassistant", "config.ini"),
+            QSettings.IniFormat,
+        )
         settings.beginGroup("script_assistant")
         settings.remove("")
         settings.endGroup()
@@ -125,7 +133,10 @@ class SettingsDialog(QDialog, FORM_CLASS):
     @staticmethod
     def load_configuration():
         """Load configuration."""
-        settings = QSettings()
+        settings = QSettings(
+            os.path.join(QgsApplication.qgisSettingsDirPath(), "scriptassistant", "config.ini"),
+            QSettings.IniFormat,
+        )
         size = settings.beginReadArray("script_assistant")
         config = {}
         for i in xrange(size):
@@ -140,6 +151,28 @@ class SettingsDialog(QDialog, FORM_CLASS):
             }
         settings.endArray()
         return config
+
+    @pyqtSlot()
+    def show_configuration(self):
+        """Show saved configuration in settings dialog."""
+        settings = QSettings(
+            os.path.join(QgsApplication.qgisSettingsDirPath(), "scriptassistant", "config.ini"),
+            QSettings.IniFormat,
+        )
+        settings.beginReadArray("script_assistant")
+        settings.setArrayIndex(self.cmb_config.currentIndex())
+        self.lne_script.setText(settings.value("script_folder"))
+        self.lne_test.setText(settings.value("test_folder"))
+        self.lne_test_data.setText(settings.value("test_data_folder"))
+        if settings.value("no_reload") == "Y":
+            self.chk_reload.setChecked(True)
+        elif settings.value("no_reload") == "N":
+            self.chk_reload.setChecked(False)
+        if settings.value("view_tests") == "Y":
+            self.chk_repaint.setChecked(True)
+        elif settings.value("view_tests") == "N":
+            self.chk_repaint.setChecked(False)
+        settings.endArray()
 
     @pyqtSlot()
     def load_existing_directory_dialog(self, line_edit):

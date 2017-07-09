@@ -277,10 +277,10 @@ class ScriptAssistant:
         )
         # If Python Console hasn't been opened before in this QGIS session
         # then pythonConsole will be a None type variable
-        try:
+        if pythonConsole is not None:
             if not pythonConsole.isVisible():
                 pythonConsole.setVisible(True)
-        except AttributeError:
+        else:
             # This method causes the Python Dialog to close if it is open
             # so we only use it when we know that is is closed
             self.iface.actionShowPythonDialog().trigger()
@@ -365,7 +365,7 @@ class ScriptAssistant:
                         break
 
         result = self.dlg_settings.exec_()
-        if result:
+        if result or not result:
             script_folder = self.dlg_settings.lne_script.text()
             gui.settings_manager.save_setting("script_folder", script_folder)
             if os.path.exists(script_folder):
@@ -415,6 +415,16 @@ class ScriptAssistant:
                         self.tr("The configured test data folder is not a valid path."),
                         level=QgsMessageBar.CRITICAL,
                     )
+
+            if self.dlg_settings.chk_reload.isChecked():
+                gui.settings_manager.save_setting("no_reload", "Y")
+            else:
+                gui.settings_manager.save_setting("no_reload", "N")
+
+            if self.dlg_settings.chk_repaint.isChecked():
+                gui.settings_manager.save_setting("view_tests", "Y")
+            else:
+                gui.settings_manager.save_setting("view_tests", "N")
 
             if self.dlg_settings.cmb_config.lineEdit().text():
                 gui.settings_manager.save_setting(
