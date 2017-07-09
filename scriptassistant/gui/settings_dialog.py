@@ -44,8 +44,10 @@ class SettingsDialog(QDialog, FORM_CLASS):
         self.lne_test_data.textChanged.connect(self.check_valid_config)
         self.lne_test_data.textEdited.connect(self.check_valid_config)
 
-        self.chk_reload.stateChanged.connect(self.set_reload)
-        self.chk_repaint.stateChanged.connect(self.set_repaint)
+        self.cmb_config.lineEdit().textChanged.connect(self.check_changes)
+        self.cmb_config.lineEdit().textEdited.connect(self.check_changes)
+        self.chk_reload.stateChanged.connect(self.check_changes)
+        self.chk_repaint.stateChanged.connect(self.check_changes)
 
     @pyqtSlot()
     def save_configuration(self):
@@ -190,23 +192,41 @@ class SettingsDialog(QDialog, FORM_CLASS):
         if os.path.isdir(self.lne_script.text()) or \
                 os.path.isdir(self.lne_test_data.text()) or \
                 os.path.isdir(self.lne_test.text()):
-            self.btn_save.setEnabled(True)
+            self.check_changes()
         else:
             self.btn_save.setEnabled(False)
 
     @pyqtSlot()
-    def set_reload(self):
+    def check_changes(self):
+        """Check if the user has changed any settings which are not saved."""
         if self.chk_reload.isChecked():
-            settings_manager.save_setting("no_reload", "Y")
+            no_reload_value = "Y"
         else:
-            settings_manager.save_setting("no_reload", "N")
-
-    @pyqtSlot()
-    def set_repaint(self):
+            no_reload_value = "N"
         if self.chk_repaint.isChecked():
-            settings_manager.save_setting("view_tests", "Y")
+            view_tests_value = "Y"
         else:
-            settings_manager.save_setting("view_tests", "N")
+            view_tests_value = "N"
+
+        # Retrieve from system
+        settings = QSettings(
+            os.path.join(QgsApplication.qgisSettingsDirPath(), "scriptassistant", "config.ini"),
+            QSettings.IniFormat,
+        )
+
+        # Check all entries against UI elements.
+        settings.beginReadArray("script_assistant")
+        settings.setArrayIndex(self.cmb_config.currentIndex())
+        if self.cmb_config.lineEdit().text() == settings.value("configuration") and \
+                self.lne_script.text() == settings.value("script_folder") and \
+                self.lne_test.text() == settings.value("test_folder") and \
+                self.lne_test_data.text() == settings.value("test_data_folder") and \
+                no_reload_value == settings.value("no_reload") and \
+                view_tests_value == settings.value("view_tests"):
+            self.btn_save.setEnabled(False)
+        else:
+            self.btn_save.setEnabled(True)
+        settings.endArray()
 
     def closeEvent(self, event):
         self.closingDialog.emit()
