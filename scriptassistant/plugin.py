@@ -96,6 +96,13 @@ class ScriptAssistant:
 
         if not script_folder:
             self.reload_scripts_action.setEnabled(False)
+        elif not os.path.isdir(script_folder):
+            self.reload_scripts_action.setEnabled(False)
+            self.iface.messageBar().pushMessage(
+                self.tr("Invalid Script Folder"),
+                self.tr("Please re-configure the script folder."),
+                level=QgsMessageBar.CRITICAL,
+            )
 
     def add_test_tool_button(self):
         """
@@ -123,6 +130,13 @@ class ScriptAssistant:
 
         if not test_data_folder:
             self.add_test_data_action.setEnabled(False)
+        elif not os.path.isdir(test_data_folder):
+            self.add_test_data_action.setEnabled(False)
+            self.iface.messageBar().pushMessage(
+                self.tr("Invalid Test Data Folder"),
+                self.tr("Please re-configure the test data folder."),
+                level=QgsMessageBar.CRITICAL,
+            )
 
     def add_settings_action(self):
         """
@@ -210,8 +224,15 @@ class ScriptAssistant:
         """
         test_folder = gui.settings_manager.load_setting("test_folder")
 
-        if test_folder and test_folder not in sys.path:
-            sys.path.append(test_folder)
+        if not os.path.isdir(test_folder):
+            self.iface.messageBar().pushMessage(
+                self.tr("Invalid Test Folder"),
+                self.tr("Please reconfigure the test folder."),
+                level=QgsMessageBar.CRITICAL,
+            )
+        else:
+            if test_folder and test_folder not in sys.path:
+                sys.path.append(test_folder)
 
         self.test_script_action = self.add_action(
             "test_scripts.png", "Test: {}".format(gui.settings_manager.load_setting("current_test")),
@@ -239,8 +260,16 @@ class ScriptAssistant:
             if not gui.settings_manager.load_setting("current_test") in test_file_names:
                 gui.settings_manager.save_setting("current_test", "$ALL")
                 self.test_script_action.setText("Test: all")
+                if gui.settings_manager.load_setting("current_test") and \
+                        gui.settings_manager.load_setting("current_test") != "$ALL":
+                    self.iface.messageBar().pushMessage(
+                        self.tr("Test Not Found"),
+                        self.tr("Configured test not found in test folder. "
+                                "Current test set to run all."),
+                        level=QgsMessageBar.CRITICAL,
+                    )
 
-        if not test_folder:
+        if not test_folder or not os.path.isdir(test_folder):
             self.test_script_action.setEnabled(False)
             self.test_all_action.setEnabled(False)
 
@@ -330,6 +359,7 @@ class ScriptAssistant:
 
     @pyqtSlot()
     def open_settings_dialog(self):
+        """Open the settings dialog and show the current configuration."""
         self.dlg_settings.show()
 
         config = self.dlg_settings.load_configuration()
@@ -363,8 +393,36 @@ class ScriptAssistant:
                         elif config[i]["view_tests"] == "N":
                             self.dlg_settings.chk_repaint.setChecked(False)
                         break
+            else:
+                # Current configuration does not exist in saved configurations
+                # e.g. Project File created on a different machine
+                self.dlg_settings.cmb_config.addItem(
+                    gui.settings_manager.load_setting("current_configuration")
+                )
+                self.dlg_settings.cmb_config.setCurrentIndex(
+                    self.dlg_settings.cmb_config.count() - 1
+                )
+                self.dlg_settings.lne_script.setText(
+                    gui.settings_manager.load_setting("script_folder")
+                )
+                self.dlg_settings.lne_test_data.setText(
+                    gui.settings_manager.load_setting("test_data_folder")
+                )
+                self.dlg_settings.lne_test.setText(
+                    gui.settings_manager.load_setting("test_folder")
+                )
+                if gui.settings_manager.load_setting("no_reload") == "Y":
+                    self.dlg_settings.chk_reload.setChecked(True)
+                elif gui.settings_manager.load_setting("no_reload") == "N":
+                    self.dlg_settings.chk_reload.setChecked(False)
+                if gui.settings_manager.load_setting("view_tests") == "Y":
+                    self.dlg_settings.chk_repaint.setChecked(True)
+                elif gui.settings_manager.load_setting("view_tests") == "N":
+                    self.dlg_settings.chk_repaint.setChecked(False)
 
         result = self.dlg_settings.exec_()
+
+        # On close
         if result or not result:
             script_folder = self.dlg_settings.lne_script.text()
             gui.settings_manager.save_setting("script_folder", script_folder)

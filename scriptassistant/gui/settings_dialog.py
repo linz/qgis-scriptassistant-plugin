@@ -46,6 +46,7 @@ class SettingsDialog(QDialog, FORM_CLASS):
 
         self.cmb_config.lineEdit().textChanged.connect(self.check_changes)
         self.cmb_config.lineEdit().textEdited.connect(self.check_changes)
+        self.cmb_config.currentIndexChanged.connect(self.check_changes)
         self.chk_reload.stateChanged.connect(self.check_changes)
         self.chk_repaint.stateChanged.connect(self.check_changes)
 
@@ -189,9 +190,24 @@ class SettingsDialog(QDialog, FORM_CLASS):
 
     @pyqtSlot()
     def check_valid_config(self):
-        if os.path.isdir(self.lne_script.text()) or \
-                os.path.isdir(self.lne_test_data.text()) or \
-                os.path.isdir(self.lne_test.text()):
+        all_paths_are_valid = True
+        if self.lne_script.text() and not os.path.isdir(self.lne_script.text()):
+            self.lne_script.setStyleSheet("color: #FF6666")
+            all_paths_are_valid = False
+        else:
+            self.lne_script.setStyleSheet("color: #000000")
+        if self.lne_test_data.text() and not os.path.isdir(self.lne_test_data.text()):
+            self.lne_test_data.setStyleSheet("color: #FF6666")
+            all_paths_are_valid = False
+        else:
+            self.lne_test_data.setStyleSheet("color: #000000")
+        if self.lne_test.text() and not os.path.isdir(self.lne_test.text()):
+            self.lne_test.setStyleSheet("color: #FF6666")
+            all_paths_are_valid = False
+        else:
+            self.lne_test.setStyleSheet("color: #000000")
+
+        if all_paths_are_valid is True:
             self.check_changes()
         else:
             self.btn_save.setEnabled(False)
@@ -224,8 +240,10 @@ class SettingsDialog(QDialog, FORM_CLASS):
                 no_reload_value == settings.value("no_reload") and \
                 view_tests_value == settings.value("view_tests"):
             self.btn_save.setEnabled(False)
+            self.setWindowTitle("Script Assistant Configuration")
         else:
             self.btn_save.setEnabled(True)
+            self.setWindowTitle("Script Assistant Configuration*")
         settings.endArray()
 
     def closeEvent(self, event):

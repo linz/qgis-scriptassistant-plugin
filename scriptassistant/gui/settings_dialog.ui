@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string>Script Assistant Configuration</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="12" column="0">
@@ -87,7 +87,7 @@
    <item row="0" column="0">
     <widget class="QLabel" name="lbl_config">
      <property name="text">
-      <string>Saved configurations</string>
+      <string>Configurations</string>
      </property>
     </widget>
    </item>
@@ -245,7 +245,7 @@
    <item row="14" column="0">
     <widget class="QCheckBox" name="chk_repaint">
      <property name="text">
-      <string>Play UI tests in slow motion</string>
+      <string>Playback UI tests in slow motion</string>
      </property>
     </widget>
    </item>
