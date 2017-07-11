@@ -224,15 +224,16 @@ class ScriptAssistant:
         """
         test_folder = gui.settings_manager.load_setting("test_folder")
 
-        if not os.path.isdir(test_folder):
-            self.iface.messageBar().pushMessage(
-                self.tr("Invalid Test Folder"),
-                self.tr("Please reconfigure the test folder."),
-                level=QgsMessageBar.CRITICAL,
-            )
-        else:
-            if test_folder and test_folder not in sys.path:
-                sys.path.append(test_folder)
+        if test_folder:
+            if not os.path.isdir(test_folder):
+                self.iface.messageBar().pushMessage(
+                    self.tr("Invalid Test Folder"),
+                    self.tr("Please reconfigure the test folder."),
+                    level=QgsMessageBar.CRITICAL,
+                )
+            else:
+                if test_folder not in sys.path:
+                    sys.path.append(test_folder)
 
         self.test_script_action = self.add_action(
             "test_scripts.png", "Test: {}".format(gui.settings_manager.load_setting("current_test")),
