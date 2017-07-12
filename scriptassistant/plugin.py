@@ -8,8 +8,9 @@ from shutil import copy
 from functools import partial
 
 from PyQt4.QtCore import (pyqtSlot, QSize, QSettings, QTranslator, qVersion,
-    QCoreApplication)
-from PyQt4.QtGui import QAction, QIcon, QMenu, QToolButton, QDockWidget
+                          QCoreApplication)
+from PyQt4.QtGui import (QAction, QIcon, QMenu, QToolButton, QDockWidget,
+                         QMessageBox, QPushButton)
 
 from qgis.gui import QgsMessageBar
 from qgis.utils import plugins, QGis
@@ -49,10 +50,7 @@ class ScriptAssistant:
         self.toolbar = self.iface.addToolBar(u"Script Assistant")
         self.toolbar.setObjectName(u"Script Assistant")
 
-        self.reload_scripts_menu = QMenu(self.toolbar)
         self.test_script_menu = QMenu(self.toolbar)
-        self.add_test_data_menu = QMenu(self.toolbar)
-
         self.test_script_menu.aboutToShow.connect(self.update_test_script_menu)
 
         self.actions = []
@@ -72,16 +70,16 @@ class ScriptAssistant:
 
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
-        self.add_reload_tool_button()
-        self.add_test_tool_button()
-        self.add_test_data_tool_button()
-        self.add_settings_action()
+        self.create_reload_action()
+        self.create_test_tool_button()
+        self.create_add_test_data_action()
+        self.create_settings_action()
 
         self.dlg_settings.show()
         self.dlg_settings.lne_test.setText(os.path.join(__location__, "tests"))
         self.dlg_settings.close()
 
-    def add_reload_tool_button(self):
+    def create_reload_action(self):
         """
         Creates the actions and tool button required for reloading scripts
         from a folder.
@@ -91,8 +89,7 @@ class ScriptAssistant:
         # Reload
         self.reload_scripts_action = self.add_action(
             "reload_scripts.png", "Reload: {}".format(script_folder), self.reload_scripts)
-        self.reload_scripts_menu.addAction(self.reload_scripts_action)
-        self.create_tool_button(self.reload_scripts_menu)
+        self.toolbar.addAction(self.reload_scripts_action)
 
         if not script_folder:
             self.reload_scripts_action.setEnabled(False)
@@ -104,7 +101,7 @@ class ScriptAssistant:
                 level=QgsMessageBar.CRITICAL,
             )
 
-    def add_test_tool_button(self):
+    def create_test_tool_button(self):
         """
         Creates the actions and tool button required for running tests
         within QGIS.
@@ -113,7 +110,7 @@ class ScriptAssistant:
         self.test_tool_button = self.create_tool_button(self.test_script_menu)
         self.test_tool_button.setDefaultAction(self.test_script_action)
 
-    def add_test_data_tool_button(self):
+    def create_add_test_data_action(self):
         """
         Creates the actions and tool button required for adding test data.
         """
@@ -125,8 +122,7 @@ class ScriptAssistant:
             "add_test_data.png", "Add Test Data From: {}".format(test_data_folder),
             self.add_test_data_to_map
         )
-        self.add_test_data_menu.addAction(self.add_test_data_action)
-        self.create_tool_button(self.add_test_data_menu)
+        self.toolbar.addAction(self.add_test_data_action)
 
         if not test_data_folder:
             self.add_test_data_action.setEnabled(False)
@@ -137,8 +133,10 @@ class ScriptAssistant:
                 self.tr("Please re-configure the test data folder."),
                 level=QgsMessageBar.CRITICAL,
             )
+        elif gui.settings_manager.load_setting("current_test") == "$ALL":
+            self.add_test_data_action.setEnabled(False)
 
-    def add_settings_action(self):
+    def create_settings_action(self):
         """
         Creates the actions and tool button required for running tests
         within QGIS.
@@ -259,8 +257,6 @@ class ScriptAssistant:
                 self.test_script_menu.addAction(action)
 
             if not gui.settings_manager.load_setting("current_test") in test_file_names:
-                gui.settings_manager.save_setting("current_test", "$ALL")
-                self.test_script_action.setText("Test: all")
                 if gui.settings_manager.load_setting("current_test") and \
                         gui.settings_manager.load_setting("current_test") != "$ALL":
                     self.iface.messageBar().pushMessage(
@@ -269,6 +265,10 @@ class ScriptAssistant:
                                 "Current test set to run all."),
                         level=QgsMessageBar.CRITICAL,
                     )
+                else:
+                    gui.settings_manager.save_setting("current_test", "$ALL")
+                    self.test_script_action.setText("Test: all")
+
 
         if not test_folder or not os.path.isdir(test_folder):
             self.test_script_action.setEnabled(False)
@@ -282,6 +282,7 @@ class ScriptAssistant:
         self.update_test_script_menu()
         if test_name:
             if test_name == "$ALL":
+                self.add_test_data_action.setEnabled(False)
                 test_folder = gui.settings_manager.load_setting("test_folder")
                 test_file_names = [
                     f[5:-3] for f in os.listdir(test_folder) if
@@ -290,6 +291,10 @@ class ScriptAssistant:
                 for actual_test_name in test_file_names:
                     self.run_test(actual_test_name)
             else:
+                if not self.add_test_data_action.isEnabled():
+                    test_data_folder = gui.settings_manager.load_setting("test_data_folder")
+                    if os.path.isdir(test_data_folder):
+                        self.add_test_data_action.setEnabled(True)
                 self.run_test(test_name)
         else:
             # Ideally the button would be disabled, but that isn't possible
@@ -425,6 +430,26 @@ class ScriptAssistant:
 
         # On close
         if result or not result:
+
+            # An asterisk in the window title indicates an unsaved configuration.
+            if "*" in self.dlg_settings.windowTitle():
+                msg_confirm = QMessageBox()
+                msg_confirm.setWindowTitle("Save")
+                msg_confirm.setText("Would you like to save this configuration?")
+                msg_confirm.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+                msg_confirm.setDefaultButton(QMessageBox.Yes)
+                msg_result = msg_confirm.exec_()
+                if msg_result == QMessageBox.Yes:
+                    self.dlg_settings.save_configuration()
+                else:
+                    msg_inform = QMessageBox()
+                    msg_inform.setWindowTitle("Info")
+                    msg_inform.setText("The configured settings will be used "
+                                       "for the current session, but will not "
+                                       "be saved for future sessions.")
+                    msg_inform.addButton(QPushButton("OK"), QMessageBox.AcceptRole)
+                    msg_inform.exec_()
+
             script_folder = self.dlg_settings.lne_script.text()
             gui.settings_manager.save_setting("script_folder", script_folder)
             if os.path.exists(script_folder):

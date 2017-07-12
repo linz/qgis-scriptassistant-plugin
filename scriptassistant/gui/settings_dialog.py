@@ -132,6 +132,8 @@ class SettingsDialog(QDialog, FORM_CLASS):
 
         if self.cmb_config.count() == 0:
             self.btn_delete.setEnabled(False)
+        else:
+            self.show_configuration()
 
     @staticmethod
     def load_configuration():
