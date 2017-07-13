@@ -8,8 +8,6 @@ from PyQt4.QtGui import QDialog, QFileDialog
 from PyQt4.QtCore import pyqtSignal, pyqtSlot, QSettings
 from qgis.core import QgsApplication
 
-import settings_manager
-
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), "settings_dialog.ui"))
 
@@ -38,14 +36,10 @@ class SettingsDialog(QDialog, FORM_CLASS):
             self.load_existing_directory_dialog, self.lne_test))
 
         self.lne_script.textChanged.connect(self.check_valid_config)
-        self.lne_script.textEdited.connect(self.check_valid_config)
         self.lne_test.textChanged.connect(self.check_valid_config)
-        self.lne_test.textEdited.connect(self.check_valid_config)
         self.lne_test_data.textChanged.connect(self.check_valid_config)
-        self.lne_test_data.textEdited.connect(self.check_valid_config)
 
         self.cmb_config.lineEdit().textChanged.connect(self.check_changes)
-        self.cmb_config.lineEdit().textEdited.connect(self.check_changes)
         self.cmb_config.currentIndexChanged.connect(self.check_changes)
         self.chk_reload.stateChanged.connect(self.check_changes)
         self.chk_repaint.stateChanged.connect(self.check_changes)
@@ -54,6 +48,7 @@ class SettingsDialog(QDialog, FORM_CLASS):
     def save_configuration(self):
         """Save configuration (overwrite if config name already exists)."""
         new_config = self.cmb_config.lineEdit().text()
+
         if self.chk_reload.isChecked():
             no_reload_value = "Y"
         else:
@@ -63,11 +58,6 @@ class SettingsDialog(QDialog, FORM_CLASS):
         else:
             view_tests_value = "N"
 
-        # Save to project file
-        config_names = [self.cmb_config.itemText(i) for i in range(self.cmb_config.count())]
-        if new_config not in config_names:
-            self.cmb_config.addItem(new_config)
-
         # Save to system
         settings = QSettings(
             os.path.join(QgsApplication.qgisSettingsDirPath(), "scriptassistant", "config.ini"),
@@ -75,6 +65,7 @@ class SettingsDialog(QDialog, FORM_CLASS):
         )
         # First get the current size of the config array in QSettings.
         size = settings.beginReadArray("script_assistant")
+
         # Check if the config already exists. If it does, overwrite it.
         for i in xrange(size):
             settings.setArrayIndex(i)
@@ -83,6 +74,7 @@ class SettingsDialog(QDialog, FORM_CLASS):
                 break
         else:  # no break
             config_index = size
+
         settings.endArray()
         # Now create new entry / overwrite (depending on index value).
         settings.beginWriteArray("script_assistant")
@@ -95,6 +87,13 @@ class SettingsDialog(QDialog, FORM_CLASS):
         settings.setValue("view_tests", view_tests_value)
         settings.endArray()
 
+        config_names = [self.cmb_config.itemText(i) for i in range(self.cmb_config.count())]
+        if new_config not in config_names:
+            self.cmb_config.addItem(new_config)
+
+        self.setWindowTitle("Script Assistant Configuration")
+        self.btn_save.setEnabled(False)
+
         if self.cmb_config.count() > 0:
             self.btn_delete.setEnabled(True)
 
@@ -105,11 +104,11 @@ class SettingsDialog(QDialog, FORM_CLASS):
         delete_config = self.cmb_config.lineEdit().text()
         for i in config:
             if config[i]["configuration"] == delete_config:
-                del_i = i
+                config.pop(i)
+                self.cmb_config.removeItem(self.cmb_config.currentIndex())
                 break
-        config.pop(del_i)
-
-        self.cmb_config.removeItem(self.cmb_config.currentIndex())
+        else:
+            self.cmb_config.lineEdit().clear()
 
         settings = QSettings(
             os.path.join(QgsApplication.qgisSettingsDirPath(), "scriptassistant", "config.ini"),
@@ -132,6 +131,11 @@ class SettingsDialog(QDialog, FORM_CLASS):
 
         if self.cmb_config.count() == 0:
             self.btn_delete.setEnabled(False)
+            self.lne_script.setText("")
+            self.lne_test.setText("")
+            self.lne_test_data.setText("")
+            self.chk_reload.setChecked(False)
+            self.chk_repaint.setChecked(False)
         else:
             self.show_configuration()
 
