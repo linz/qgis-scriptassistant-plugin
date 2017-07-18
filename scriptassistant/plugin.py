@@ -17,8 +17,6 @@ from qgis.gui import QgsMessageBar
 from qgis.utils import plugins, QGis
 from processing.script.ScriptUtils import ScriptUtils
 
-# Initialize Qt resources from file resources.py
-import resources
 import gui.settings_manager
 from gui.settings_dialog import SettingsDialog
 
@@ -382,46 +380,11 @@ class ScriptAssistant:
         """Open the settings dialog and show the current configuration."""
         self.dlg_settings.show()
 
-        config = self.dlg_settings.load_configuration()
-        config_names = []
-        for i in config:
-            config_names.append(config[i]["configuration"])
-        if config_names:
-            self.dlg_settings.btn_delete.setEnabled(True)
-            self.dlg_settings.cmb_config.clear()
-            self.dlg_settings.cmb_config.addItems(config_names)
-        else:
-            self.dlg_settings.btn_delete.setEnabled(False)
+        self.populate_config_combo()
 
         if gui.settings_manager.load_setting("current_configuration"):
-            index = self.dlg_settings.cmb_config.findText(
-                gui.settings_manager.load_setting("current_configuration")
-            )
-            if index >= 0:
-                self.dlg_settings.cmb_config.setCurrentIndex(index)
-            else:
-                # Current configuration does not exist in saved configurations
-                # e.g. Project File created on a different machine
-                self.dlg_settings.cmb_config.lineEdit().setText(
-                    gui.settings_manager.load_setting("current_configuration")
-                )
-            self.dlg_settings.lne_script.setText(
-                gui.settings_manager.load_setting("script_folder")
-            )
-            self.dlg_settings.lne_test_data.setText(
-                gui.settings_manager.load_setting("test_data_folder")
-            )
-            self.dlg_settings.lne_test.setText(
-                gui.settings_manager.load_setting("test_folder")
-            )
-            if gui.settings_manager.load_setting("no_reload") == "Y":
-                self.dlg_settings.chk_reload.setChecked(True)
-            elif gui.settings_manager.load_setting("no_reload") == "N":
-                self.dlg_settings.chk_reload.setChecked(False)
-            if gui.settings_manager.load_setting("view_tests") == "Y":
-                self.dlg_settings.chk_repaint.setChecked(True)
-            elif gui.settings_manager.load_setting("view_tests") == "N":
-                self.dlg_settings.chk_repaint.setChecked(False)
+            self.show_last_configuration()
+
             self.dlg_settings.check_changes()
 
         result = self.dlg_settings.exec_()
@@ -513,6 +476,50 @@ class ScriptAssistant:
                     "current_configuration",
                     self.dlg_settings.cmb_config.lineEdit().text()
                 )
+
+    def populate_config_combo(self):
+        """Populates the list of configurations from settings."""
+        config = self.dlg_settings.load_configuration()
+        config_names = []
+        for i in config:
+            config_names.append(config[i]["configuration"])
+        if config_names:
+            self.dlg_settings.btn_delete.setEnabled(True)
+            self.dlg_settings.cmb_config.clear()
+            self.dlg_settings.cmb_config.addItems(config_names)
+        else:
+            self.dlg_settings.btn_delete.setEnabled(False)
+
+    def show_last_configuration(self):
+        """Show last configuration used."""
+        index = self.dlg_settings.cmb_config.findText(
+            gui.settings_manager.load_setting("current_configuration")
+        )
+        if index >= 0:
+            self.dlg_settings.cmb_config.setCurrentIndex(index)
+        else:
+            # Current configuration does not exist in saved configurations
+            # e.g. Project File created on a different machine
+            self.dlg_settings.cmb_config.lineEdit().setText(
+                gui.settings_manager.load_setting("current_configuration")
+            )
+        self.dlg_settings.lne_script.setText(
+            gui.settings_manager.load_setting("script_folder")
+        )
+        self.dlg_settings.lne_test_data.setText(
+            gui.settings_manager.load_setting("test_data_folder")
+        )
+        self.dlg_settings.lne_test.setText(
+            gui.settings_manager.load_setting("test_folder")
+        )
+        if gui.settings_manager.load_setting("no_reload") == "Y":
+            self.dlg_settings.chk_reload.setChecked(True)
+        elif gui.settings_manager.load_setting("no_reload") == "N":
+            self.dlg_settings.chk_reload.setChecked(False)
+        if gui.settings_manager.load_setting("view_tests") == "Y":
+            self.dlg_settings.chk_repaint.setChecked(True)
+        elif gui.settings_manager.load_setting("view_tests") == "N":
+            self.dlg_settings.chk_repaint.setChecked(False)
 
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
