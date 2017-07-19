@@ -31,7 +31,6 @@ class ScriptAssistantSettingsTest(unittest.TestCase):
 
     def setUp(self):
         """Runs before each test."""
-        print self.dlg.cmb_config.count()
         self.dlg.show()
         self.dlg.populate_config_combo()
         self.dlg.show_last_configuration()
@@ -44,7 +43,6 @@ class ScriptAssistantSettingsTest(unittest.TestCase):
         pass
 
     def view(self, qt_object):
-        print self.dlg.cmb_config.count()
         if view_tests_during_execution:
             qt_object.repaint()
             time.sleep(1)
