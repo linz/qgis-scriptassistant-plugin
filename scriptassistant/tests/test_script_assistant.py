@@ -5,6 +5,7 @@ import sys
 import time
 import unittest
 
+from qgis.core import QgsApplication, QgsMapLayerRegistry
 from qgis.gui import QgsMessageBar
 from qgis.utils import plugins, iface
 
@@ -30,9 +31,10 @@ class ScriptAssistantSettingsTest(unittest.TestCase):
 
     def setUp(self):
         """Runs before each test."""
+        print self.dlg.cmb_config.count()
         self.dlg.show()
-        self.scriptassistant.populate_config_combo()
-        self.scriptassistant.show_last_configuration()
+        self.dlg.populate_config_combo()
+        self.dlg.show_last_configuration()
         self.view(self.dlg)
 
     def tearDown(self):
@@ -42,6 +44,7 @@ class ScriptAssistantSettingsTest(unittest.TestCase):
         pass
 
     def view(self, qt_object):
+        print self.dlg.cmb_config.count()
         if view_tests_during_execution:
             qt_object.repaint()
             time.sleep(1)
@@ -85,17 +88,66 @@ class ScriptAssistantSettingsTest(unittest.TestCase):
         self.dlg.cmb_config.lineEdit().setText("Script Assistant Test")
         self.view(self.dlg)
         self.assertIn("*", self.dlg.windowTitle())
-        self.dlg.lne_test_data.setText(os.path.join(__location__, "testdata"))
+        self.dlg.lne_test_data.setText(os.path.join(__location__, "tests", "testdata"))
         self.assertTrue(self.dlg.btn_save.isEnabled())
         self.view(self.dlg)
         self.dlg.btn_save.clicked.emit(True)
         self.assertEqual(self.dlg.cmb_config.lineEdit().text(), "Script Assistant Test")
-        self.assertEqual(self.dlg.lne_test_data.text(), os.path.join(__location__, "testdata"))
+        self.assertEqual(self.dlg.lne_test_data.text(), os.path.join(__location__, "tests", "testdata"))
         self.assertFalse(self.dlg.btn_save.isEnabled())
         self.assertTrue(self.dlg.btn_delete.isEnabled())
         self.dlg.btn_delete.clicked.emit(True)
         self.dlg.cmb_config.setCurrentIndex(self.dlg.cmb_config.findText("Script Assistant"))
         self.view(self.dlg)
+
+    def test_running_script_test(self):
+        self.view(self.dlg)
+        self.dlg.lne_test.setText(os.path.join(__location__, "tests"))
+        self.assertIn("*", self.dlg.windowTitle())
+        self.dlg.btn_save.clicked.emit(True)
+        self.assertNotIn("*", self.dlg.windowTitle())
+        self.scriptassistant.save_settings()
+        self.dlg.close()
+        self.view(self.dlg)
+        for action in self.scriptassistant.test_actions:
+            if action.text() == "add_area_column":
+                action.triggered.emit(True)
+        self.dlg.show()
+        self.dlg.populate_config_combo()
+        self.dlg.show_last_configuration()
+        self.view(self.dlg)
+        self.dlg.lne_test.setText(__location__)
+        self.dlg.lne_test_data.setText("")
+        self.dlg.btn_save.clicked.emit(True)
+        self.scriptassistant.save_settings()
+        os.remove(
+            os.path.join(
+                QgsApplication.qgisSettingsDirPath(),
+                "processing", "scripts", "add_area_column.py"
+            )
+        )
+        plugins["processing"].toolbox.updateProvider("script")
+
+    def test_running_plugin_test(self):
+        self.view(self.dlg)
+        self.dlg.lne_test.setText(os.path.join(__location__, "tests"))
+        self.assertIn("*", self.dlg.windowTitle())
+        self.dlg.btn_save.clicked.emit(True)
+        self.assertNotIn("*", self.dlg.windowTitle())
+        self.scriptassistant.save_settings()
+        self.dlg.close()
+        self.view(self.dlg)
+        for action in self.scriptassistant.test_actions:
+            if action.text() == "plugin":
+                action.triggered.emit(True)
+        self.dlg.show()
+        self.dlg.populate_config_combo()
+        self.dlg.show_last_configuration()
+        self.view(self.dlg)
+        self.dlg.lne_test.setText(__location__)
+        self.dlg.lne_test_data.setText("")
+        self.dlg.btn_save.clicked.emit(True)
+        self.scriptassistant.save_settings()
 
 
 def run_tests(view_tests=False):
