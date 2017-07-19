@@ -8,6 +8,8 @@ from PyQt4.QtGui import QDialog, QFileDialog
 from PyQt4.QtCore import pyqtSignal, pyqtSlot, QSettings
 from qgis.core import QgsApplication
 
+import settings_manager
+
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), "settings_dialog.ui"))
 
@@ -251,6 +253,50 @@ class SettingsDialog(QDialog, FORM_CLASS):
             self.btn_save.setEnabled(True)
             self.setWindowTitle("Script Assistant Configuration*")
         settings.endArray()
+
+    def populate_config_combo(self):
+        """Populates the list of configurations from settings."""
+        config = self.load_configuration()
+        config_names = []
+        for i in config:
+            config_names.append(config[i]["configuration"])
+        if config_names:
+            self.btn_delete.setEnabled(True)
+            self.cmb_config.clear()
+            self.cmb_config.addItems(config_names)
+        else:
+            self.btn_delete.setEnabled(False)
+
+    def show_last_configuration(self):
+        """Show last configuration used."""
+        index = self.cmb_config.findText(
+            settings_manager.load_setting("current_configuration")
+        )
+        if index >= 0:
+            self.cmb_config.setCurrentIndex(index)
+        else:
+            # Current configuration does not exist in saved configurations
+            # e.g. Project File created on a different machine
+            self.cmb_config.lineEdit().setText(
+                settings_manager.load_setting("current_configuration")
+            )
+        self.lne_script.setText(
+            settings_manager.load_setting("script_folder")
+        )
+        self.lne_test_data.setText(
+            settings_manager.load_setting("test_data_folder")
+        )
+        self.lne_test.setText(
+            settings_manager.load_setting("test_folder")
+        )
+        if settings_manager.load_setting("no_reload") == "Y":
+            self.chk_reload.setChecked(True)
+        elif settings_manager.load_setting("no_reload") == "N":
+            self.chk_reload.setChecked(False)
+        if settings_manager.load_setting("view_tests") == "Y":
+            self.chk_repaint.setChecked(True)
+        elif settings_manager.load_setting("view_tests") == "N":
+            self.chk_repaint.setChecked(False)
 
     def closeEvent(self, event):
         self.closingDialog.emit()

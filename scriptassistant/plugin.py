@@ -53,6 +53,8 @@ class ScriptAssistant:
         self.test_script_menu.aboutToShow.connect(self.update_test_script_menu)
 
         self.actions = []
+        self.test_actions = []
+        self.test_script_action = None
 
         # Initialise QGIS menu item
         self.menu = self.tr(u"&Script Assistant")
@@ -82,7 +84,7 @@ class ScriptAssistant:
                 gui.settings_manager.save_setting("script_folder", "")
                 gui.settings_manager.save_setting("test_folder", os.path.join(__location__, "tests"))
                 gui.settings_manager.save_setting("test_data_folder", "")
-                gui.settings_manager.save_setting("view_tests", "Y")
+                gui.settings_manager.save_setting("view_tests", "N")
                 gui.settings_manager.save_setting("no_reload", "N")
                 gui.settings_manager.save_setting("current_test", "$ALL")
 
@@ -93,7 +95,7 @@ class ScriptAssistant:
                 settings.setValue("test_data_folder", "")
                 settings.setValue("test_folder", os.path.join(__location__, "tests"))
                 settings.setValue("no_reload", "N")
-                settings.setValue("view_tests", "Y")
+                settings.setValue("view_tests", "N")
                 settings.endArray()
 
         self.create_reload_action()
@@ -155,8 +157,6 @@ class ScriptAssistant:
                 self.tr("Please re-configure the test data folder."),
                 level=QgsMessageBar.CRITICAL,
             )
-        elif gui.settings_manager.load_setting("current_test") == "$ALL":
-            self.add_test_data_action.setEnabled(False)
 
     def create_settings_action(self):
         """
@@ -169,15 +169,18 @@ class ScriptAssistant:
         )
         self.toolbar.addAction(self.settings_action)
 
-    def add_action(self, icon_filename, text, callback):
+    def add_action(self, icon_filename, text, callback, test=False):
         """Creates an action with an icon, assigned to a QToolButton menu."""
         icon_path = os.path.join(self.image_dir, icon_filename)
         icon = QIcon()
         icon.addFile(icon_path, QSize(8, 8))
         action = QAction(icon, text, self.toolbar)
         action.triggered.connect(callback)
-        self.iface.addPluginToMenu(self.menu, action)
-        self.actions.append(action)
+        if test is False:
+            self.iface.addPluginToMenu(self.menu, action)
+            self.actions.append(action)
+        else:
+            self.test_actions.append(action)
         return action
 
     def create_tool_button(self, tool_button_menu):
@@ -255,6 +258,10 @@ class ScriptAssistant:
                 if test_folder not in sys.path:
                     sys.path.append(test_folder)
 
+        self.test_actions = []
+        if self.test_script_action:
+            self.iface.removePluginMenu(self.tr(u"&Script Assistant"), self.test_script_action)
+
         self.test_script_action = self.add_action(
             "test_scripts.png", "Test: {}".format(gui.settings_manager.load_setting("current_test")),
             partial(self.prepare_test, gui.settings_manager.load_setting("current_test"))
@@ -262,7 +269,7 @@ class ScriptAssistant:
         self.test_script_menu.addAction(self.test_script_action)
         self.test_all_action = self.add_action(
             "test_scripts.png", "all in: {}".format(test_folder),
-            partial(self.prepare_test, "$ALL")
+            partial(self.prepare_test, "$ALL"), True
         )
         self.test_script_menu.addAction(self.test_all_action)
 
@@ -274,7 +281,7 @@ class ScriptAssistant:
             for test_name in test_file_names:
                 action = self.add_action(
                     "test_scripts.png", test_name,
-                    partial(self.prepare_test, test_name)
+                    partial(self.prepare_test, test_name), True
                 )
                 self.test_script_menu.addAction(action)
 
@@ -365,6 +372,13 @@ class ScriptAssistant:
         test_data_folder = gui.settings_manager.load_setting("test_data_folder")
         test_folder = gui.settings_manager.load_setting("test_folder")
         current_test = gui.settings_manager.load_setting("current_test")
+        if current_test == "$ALL":
+            self.iface.messageBar().pushMessage(
+                self.tr("Select a Single Test"),
+                self.tr("Cannot add test data for all tests."),
+                level=QgsMessageBar.WARNING,
+            )
+            return
         test_file = open(os.path.join(test_folder, "test_{}.py".format(current_test)), "r")
         test_text = test_file.read()
         test_file.close()
@@ -380,10 +394,10 @@ class ScriptAssistant:
         """Open the settings dialog and show the current configuration."""
         self.dlg_settings.show()
 
-        self.populate_config_combo()
+        self.dlg_settings.populate_config_combo()
 
         if gui.settings_manager.load_setting("current_configuration"):
-            self.show_last_configuration()
+            self.dlg_settings.show_last_configuration()
 
             self.dlg_settings.check_changes()
 
@@ -411,115 +425,77 @@ class ScriptAssistant:
                     msg_inform.addButton(QPushButton("OK"), QMessageBox.AcceptRole)
                     msg_inform.exec_()
 
-            script_folder = self.dlg_settings.lne_script.text()
-            gui.settings_manager.save_setting("script_folder", script_folder)
-            if os.path.exists(script_folder):
-                self.reload_scripts_action.setText("Reload: {}".format(script_folder))
-                self.reload_scripts_action.setEnabled(True)
-            else:
-                self.reload_scripts_action.setText("Invalid Script Folder Path")
-                self.reload_scripts_action.setEnabled(False)
-                if script_folder != "":
-                    self.iface.messageBar().pushMessage(
-                        self.tr("Invalid Script Folder Path"),
-                        self.tr("The configured script folder is not a valid path."),
-                        level=QgsMessageBar.CRITICAL,
-                    )
+            self.save_settings()
 
-            test_folder = self.dlg_settings.lne_test.text()
-            gui.settings_manager.save_setting("test_folder", test_folder)
-            if os.path.exists(test_folder):
-                self.test_script_action.setEnabled(True)
-                self.test_all_action.setEnabled(True)
-                if test_folder not in sys.path:
-                    sys.path.append(test_folder)
-                self.update_test_script_menu()
-            else:
-                self.test_script_action.setText("Invalid Test Script Path")
-                self.test_script_action.setEnabled(False)
-                self.test_all_action.setEnabled(False)
-                self.add_test_data_action.setEnabled(False)
-                if test_folder != "":
-                    self.iface.messageBar().pushMessage(
-                        self.tr("Invalid Test Script Path"),
-                        self.tr("The configured test script folder is not a valid path."),
-                        level=QgsMessageBar.CRITICAL,
-                    )
-
-            test_data_folder = self.dlg_settings.lne_test_data.text()
-            gui.settings_manager.save_setting("test_data_folder", test_data_folder)
-            if os.path.exists(test_data_folder):
-                self.add_test_data_action.setText("Add Test Data From: {}".format(test_data_folder))
-                self.add_test_data_action.setEnabled(True)
-            else:
-                self.add_test_data_action.setText("Invalid Test Data Path")
-                self.add_test_data_action.setEnabled(False)
-                if test_data_folder != "":
-                    self.iface.messageBar().pushMessage(
-                        self.tr("Invalid Test Data Path"),
-                        self.tr("The configured test data folder is not a valid path."),
-                        level=QgsMessageBar.CRITICAL,
-                    )
-
-            if self.dlg_settings.chk_reload.isChecked():
-                gui.settings_manager.save_setting("no_reload", "Y")
-            else:
-                gui.settings_manager.save_setting("no_reload", "N")
-
-            if self.dlg_settings.chk_repaint.isChecked():
-                gui.settings_manager.save_setting("view_tests", "Y")
-            else:
-                gui.settings_manager.save_setting("view_tests", "N")
-
-            if self.dlg_settings.cmb_config.lineEdit().text():
-                gui.settings_manager.save_setting(
-                    "current_configuration",
-                    self.dlg_settings.cmb_config.lineEdit().text()
+    def save_settings(self):
+        """Save current settings to Project file and config."""
+        script_folder = self.dlg_settings.lne_script.text()
+        gui.settings_manager.save_setting("script_folder", script_folder)
+        if os.path.exists(script_folder):
+            self.reload_scripts_action.setText("Reload: {}".format(script_folder))
+            self.reload_scripts_action.setEnabled(True)
+        else:
+            self.reload_scripts_action.setText("Invalid Script Folder Path")
+            self.reload_scripts_action.setEnabled(False)
+            if script_folder != "":
+                self.iface.messageBar().pushMessage(
+                    self.tr("Invalid Script Folder Path"),
+                    self.tr("The configured script folder is not a valid path."),
+                    level=QgsMessageBar.CRITICAL,
                 )
 
-    def populate_config_combo(self):
-        """Populates the list of configurations from settings."""
-        config = self.dlg_settings.load_configuration()
-        config_names = []
-        for i in config:
-            config_names.append(config[i]["configuration"])
-        if config_names:
-            self.dlg_settings.btn_delete.setEnabled(True)
-            self.dlg_settings.cmb_config.clear()
-            self.dlg_settings.cmb_config.addItems(config_names)
+        test_folder = self.dlg_settings.lne_test.text()
+        gui.settings_manager.save_setting("test_folder", test_folder)
+        if os.path.exists(test_folder):
+            gui.settings_manager.save_setting("current_test", "$ALL")
+            self.test_script_action.setEnabled(True)
+            self.test_all_action.setEnabled(True)
+            if test_folder not in sys.path:
+                sys.path.append(test_folder)
+            self.update_test_script_menu()
         else:
-            self.dlg_settings.btn_delete.setEnabled(False)
+            self.test_script_action.setText("Invalid Test Script Path")
+            self.test_script_action.setEnabled(False)
+            self.test_all_action.setEnabled(False)
+            self.add_test_data_action.setEnabled(False)
+            if test_folder != "":
+                self.iface.messageBar().pushMessage(
+                    self.tr("Invalid Test Script Path"),
+                    self.tr("The configured test script folder is not a valid path."),
+                    level=QgsMessageBar.CRITICAL,
+                )
 
-    def show_last_configuration(self):
-        """Show last configuration used."""
-        index = self.dlg_settings.cmb_config.findText(
-            gui.settings_manager.load_setting("current_configuration")
-        )
-        if index >= 0:
-            self.dlg_settings.cmb_config.setCurrentIndex(index)
+        test_data_folder = self.dlg_settings.lne_test_data.text()
+        gui.settings_manager.save_setting("test_data_folder", test_data_folder)
+        if os.path.exists(test_data_folder):
+            self.add_test_data_action.setText("Add Test Data From: {}".format(test_data_folder))
+            self.add_test_data_action.setEnabled(True)
         else:
-            # Current configuration does not exist in saved configurations
-            # e.g. Project File created on a different machine
-            self.dlg_settings.cmb_config.lineEdit().setText(
-                gui.settings_manager.load_setting("current_configuration")
+            self.add_test_data_action.setText("Invalid Test Data Path")
+            self.add_test_data_action.setEnabled(False)
+            if test_data_folder != "":
+                self.iface.messageBar().pushMessage(
+                    self.tr("Invalid Test Data Path"),
+                    self.tr("The configured test data folder is not a valid path."),
+                    level=QgsMessageBar.CRITICAL,
+                )
+
+        if self.dlg_settings.chk_reload.isChecked():
+            gui.settings_manager.save_setting("no_reload", "Y")
+        else:
+            gui.settings_manager.save_setting("no_reload", "N")
+
+        if self.dlg_settings.chk_repaint.isChecked():
+            gui.settings_manager.save_setting("view_tests", "Y")
+        else:
+            gui.settings_manager.save_setting("view_tests", "N")
+
+        if self.dlg_settings.cmb_config.lineEdit().text():
+            gui.settings_manager.save_setting(
+                "current_configuration",
+                self.dlg_settings.cmb_config.lineEdit().text()
             )
-        self.dlg_settings.lne_script.setText(
-            gui.settings_manager.load_setting("script_folder")
-        )
-        self.dlg_settings.lne_test_data.setText(
-            gui.settings_manager.load_setting("test_data_folder")
-        )
-        self.dlg_settings.lne_test.setText(
-            gui.settings_manager.load_setting("test_folder")
-        )
-        if gui.settings_manager.load_setting("no_reload") == "Y":
-            self.dlg_settings.chk_reload.setChecked(True)
-        elif gui.settings_manager.load_setting("no_reload") == "N":
-            self.dlg_settings.chk_reload.setChecked(False)
-        if gui.settings_manager.load_setting("view_tests") == "Y":
-            self.dlg_settings.chk_repaint.setChecked(True)
-        elif gui.settings_manager.load_setting("view_tests") == "N":
-            self.dlg_settings.chk_repaint.setChecked(False)
+
 
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
