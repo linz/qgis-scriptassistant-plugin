@@ -7,11 +7,11 @@
     <x>0</x>
     <y>0</y>
     <width>380</width>
-    <height>314</height>
+    <height>350</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string>Script Assistant Configuration</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="12" column="0">
@@ -66,7 +66,7 @@
       <enum>Qt::Horizontal</enum>
      </property>
      <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+      <set>QDialogButtonBox::Ok</set>
      </property>
     </widget>
    </item>
@@ -87,7 +87,7 @@
    <item row="0" column="0">
     <widget class="QLabel" name="lbl_config">
      <property name="text">
-      <string>Saved configurations</string>
+      <string>Configurations</string>
      </property>
     </widget>
    </item>
@@ -245,12 +245,26 @@
    <item row="14" column="0">
     <widget class="QCheckBox" name="chk_repaint">
      <property name="text">
-      <string>Repaint widgets between tests</string>
+      <string>Playback UI tests in slow motion</string>
      </property>
     </widget>
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>cmb_config</tabstop>
+  <tabstop>btn_save</tabstop>
+  <tabstop>btn_delete</tabstop>
+  <tabstop>lne_script</tabstop>
+  <tabstop>btn_script</tabstop>
+  <tabstop>lne_test</tabstop>
+  <tabstop>btn_test</tabstop>
+  <tabstop>lne_test_data</tabstop>
+  <tabstop>btn_test_data</tabstop>
+  <tabstop>chk_reload</tabstop>
+  <tabstop>chk_repaint</tabstop>
+  <tabstop>button_box</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>

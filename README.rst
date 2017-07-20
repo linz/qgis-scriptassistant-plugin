@@ -3,7 +3,7 @@ QGIS Script Assistant Plugin
 ============================
 
 .. image:: https://img.shields.io/badge/License-BSD%203--Clause-blue.svg
-    :target: https://github.com/linz/qgis-importimage-plugin/blob/master/LICENSE
+    :target: https://github.com/linz/qgis-scriptassistant-plugin/blob/master/LICENSE
 
 .. image:: https://travis-ci.com/linz/qgis-scriptassistant-plugin.svg?token=K4ECbFVBqQndQscY6xjY&branch=master
     :target: https://travis-ci.org/linz/qgis-scriptassistant-plugin

@@ -5,9 +5,7 @@ import sys
 import time
 import unittest
 
-from PyQt4.QtCore import Qt, QModelIndex
-from PyQt4.QtGui import QKeyEvent, QItemSelectionModel, QKeySequence
-from qgis.core import QgsFeatureRequest, QgsGeometry
+from qgis.core import QgsApplication, QgsMapLayerRegistry
 from qgis.gui import QgsMessageBar
 from qgis.utils import plugins, iface
 
@@ -17,21 +15,31 @@ __location__ = os.path.realpath(
 view_tests_during_execution = False
 
 
-class ScriptAssistantTest(unittest.TestCase):
+class ScriptAssistantSettingsTest(unittest.TestCase):
     """Test the Script Assistant plugin."""
 
     @classmethod
     def setUpClass(cls):
         """Runs at TestCase init."""
-        cls.scriptassistant = plugins.get('scriptassistant')
+        cls.scriptassistant = plugins.get("scriptassistant")
+        cls.dlg = cls.scriptassistant.dlg_settings
 
-    # @classmethod
-    # def tearDownClass(cls):
-    #     """Runs at TestCase teardown."""
-    #     cls.road_plugin.dockwidget.close()
+    @classmethod
+    def tearDownClass(cls):
+        """Runs at TestCase teardown."""
+        pass
 
     def setUp(self):
         """Runs before each test."""
+        self.dlg.show()
+        self.dlg.populate_config_combo()
+        self.dlg.show_last_configuration()
+        self.view(self.dlg)
+
+    def tearDown(self):
+        """Runs after each test."""
+        self.dlg.close()
+        self.view(self.dlg)
         pass
 
     def view(self, qt_object):
@@ -41,45 +49,103 @@ class ScriptAssistantTest(unittest.TestCase):
         else:
             pass
 
-    def test_settings(self):
-        settings_dialog = self.scriptassistant.dlg_settings
-        settings_dialog.show()
-        self.view(settings_dialog)
-        self.assertFalse(settings_dialog.btn_delete.isEnabled())
-        settings_dialog.lne_script.setText(os.path.join(__location__, 'testdata'))
-        self.view(settings_dialog)
-        settings_dialog.lne_test_data.setText(os.path.join(__location__, 'testdata'))
-        self.view(settings_dialog)
-        self.assertTrue(settings_dialog.btn_save.isEnabled())
-        settings_dialog.cmb_config.lineEdit().setText('Script Assistant')
-        self.view(settings_dialog)
-        settings_dialog.btn_save.clicked.emit(True)
-        self.view(settings_dialog)
-        settings_dialog.close()
-        settings_dialog.show()
-        self.view(settings_dialog)
-        self.assertEquals(settings_dialog.cmb_config.lineEdit().text(), 'Script Assistant')
-        self.view(settings_dialog)
-        settings_dialog.btn_delete.clicked.emit(True)
-        self.view(settings_dialog)
-        self.assertEquals(settings_dialog.cmb_config.lineEdit().text(), '')
+    def test_correct_script_assistant_test_settings(self):
+        self.assertEqual(self.dlg.cmb_config.lineEdit().text(), "Script Assistant")
+        self.assertFalse(self.dlg.btn_save.isEnabled())
+        self.assertTrue(self.dlg.btn_delete.isEnabled())
+        self.assertEqual(self.dlg.lne_script.text(), "")
+        self.assertEqual(self.dlg.lne_test.text(), __location__)
+        self.assertEqual(self.dlg.lne_test_data.text(), "")
+        self.assertFalse(self.dlg.chk_reload.isChecked())
 
-    # def test_add_test_data(self):
-    #     settings_dialog = self.scriptassistant.dlg_settings
-    #     settings_dialog.lne_test.setText(os.path.join(__location__, 'testdata'))
-    #     self.view(settings_dialog)
-    #     self.scriptassistant.prepareTest('$ALL')
-    #     self.view(settings_dialog)
+    def test_deleting_settings(self):
+        count = self.dlg.cmb_config.count()
+        self.dlg.btn_delete.clicked.emit(True)
+        self.view(self.dlg)
+        if count == 1:
+            self.assertTrue(self.dlg.btn_save.isEnabled())
+            self.assertFalse(self.dlg.btn_delete.isEnabled())
+            self.assertEqual(self.dlg.lne_script.text(), "")
+            self.assertEqual(self.dlg.lne_test.text(), "")
+            self.assertEqual(self.dlg.lne_test_data.text(), "")
+            self.assertFalse(self.dlg.chk_reload.isChecked())
+            self.assertFalse(self.dlg.chk_repaint.isChecked())
+            self.assertIn("*", self.dlg.windowTitle())
+        else:
+            self.assertEqual(count - 1, self.dlg.cmb_config.count())
+        self.dlg.cmb_config.lineEdit().setText("Script Assistant")
+        self.dlg.lne_script.setText("")
+        self.dlg.lne_test.setText(__location__)
+        self.dlg.lne_test_data.setText("")
+        self.dlg.chk_reload.setChecked(False)
+        self.dlg.chk_repaint.setChecked(True)
+        self.dlg.btn_save.clicked.emit(True)
+        self.view(self.dlg)
 
-    def tearDown(self):
-        settings_dialog = self.scriptassistant.dlg_settings
-        while settings_dialog.btn_delete.isEnabled():
-            settings_dialog.btn_delete.clicked.emit(True)
-        settings_dialog.lne_script.setText('')
-        settings_dialog.lne_test.setText(__location__)
-        settings_dialog.lne_test_data.setText('')
-        self.view(settings_dialog)
-        settings_dialog.close()
+    def test_adding_new_settings(self):
+        self.dlg.cmb_config.lineEdit().setText("Script Assistant Test")
+        self.view(self.dlg)
+        self.assertIn("*", self.dlg.windowTitle())
+        self.dlg.lne_test_data.setText(os.path.join(__location__, "tests", "testdata"))
+        self.assertTrue(self.dlg.btn_save.isEnabled())
+        self.view(self.dlg)
+        self.dlg.btn_save.clicked.emit(True)
+        self.assertEqual(self.dlg.cmb_config.lineEdit().text(), "Script Assistant Test")
+        self.assertEqual(self.dlg.lne_test_data.text(), os.path.join(__location__, "tests", "testdata"))
+        self.assertFalse(self.dlg.btn_save.isEnabled())
+        self.assertTrue(self.dlg.btn_delete.isEnabled())
+        self.dlg.btn_delete.clicked.emit(True)
+        self.dlg.cmb_config.setCurrentIndex(self.dlg.cmb_config.findText("Script Assistant"))
+        self.view(self.dlg)
+
+    def test_running_script_test(self):
+        self.view(self.dlg)
+        self.dlg.lne_test.setText(os.path.join(__location__, "tests"))
+        self.assertIn("*", self.dlg.windowTitle())
+        self.dlg.btn_save.clicked.emit(True)
+        self.assertNotIn("*", self.dlg.windowTitle())
+        self.scriptassistant.save_settings()
+        self.dlg.close()
+        self.view(self.dlg)
+        for action in self.scriptassistant.test_actions:
+            if action.text() == "add_area_column":
+                action.triggered.emit(True)
+        self.dlg.show()
+        self.dlg.populate_config_combo()
+        self.dlg.show_last_configuration()
+        self.view(self.dlg)
+        self.dlg.lne_test.setText(__location__)
+        self.dlg.lne_test_data.setText("")
+        self.dlg.btn_save.clicked.emit(True)
+        self.scriptassistant.save_settings()
+        os.remove(
+            os.path.join(
+                QgsApplication.qgisSettingsDirPath(),
+                "processing", "scripts", "add_area_column.py"
+            )
+        )
+        plugins["processing"].toolbox.updateProvider("script")
+
+    def test_running_plugin_test(self):
+        self.view(self.dlg)
+        self.dlg.lne_test.setText(os.path.join(__location__, "tests"))
+        self.assertIn("*", self.dlg.windowTitle())
+        self.dlg.btn_save.clicked.emit(True)
+        self.assertNotIn("*", self.dlg.windowTitle())
+        self.scriptassistant.save_settings()
+        self.dlg.close()
+        self.view(self.dlg)
+        for action in self.scriptassistant.test_actions:
+            if action.text() == "plugin":
+                action.triggered.emit(True)
+        self.dlg.show()
+        self.dlg.populate_config_combo()
+        self.dlg.show_last_configuration()
+        self.view(self.dlg)
+        self.dlg.lne_test.setText(__location__)
+        self.dlg.lne_test_data.setText("")
+        self.dlg.btn_save.clicked.emit(True)
+        self.scriptassistant.save_settings()
 
 
 def run_tests(view_tests=False):
@@ -89,17 +155,17 @@ def run_tests(view_tests=False):
     else:
         view_tests_during_execution = False
     suite = unittest.TestSuite()
-    suite.addTests(unittest.makeSuite(ScriptAssistantTest, 'test'))
+    suite.addTests(unittest.makeSuite(ScriptAssistantSettingsTest, "test"))
     result = unittest.TextTestRunner(verbosity=2, stream=sys.stdout).run(suite)
     if result.wasSuccessful():
         iface.messageBar().pushMessage(
-            'All Tests Passed',
-            'Testing was successful.',
+            "All Tests Passed",
+            "Testing was successful.",
             level=QgsMessageBar.SUCCESS,
         )
     else:
         iface.messageBar().pushMessage(
-            'Test Failure',
-            'Testing was not successful.',
+            "Test Failure",
+            "Testing was not successful.",
             level=QgsMessageBar.CRITICAL,
         )
