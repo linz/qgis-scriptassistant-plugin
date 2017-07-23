@@ -4,6 +4,22 @@ Change Log
 
 All notable changes to this project will be documented in this file.
 
+0.4.0 - 2017-07-24
+==================
+
+Added
+-----
+
+ * Save confirmation if settings dialog closed with unsaved settings
+ * Directory validation and handling for missing dirs
+ * Documentation via readthedocs
+
+Changed
+-------
+
+ * Using plugin specific Settings instead of using QGIS Settings
+ * Improved self testing
+
 0.3.0 - 2017-05-19
 ==================
 
