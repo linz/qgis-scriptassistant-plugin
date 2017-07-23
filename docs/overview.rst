@@ -1,6 +1,6 @@
-============================
-QGIS Script Assistant Plugin
-============================
+========
+Overview
+========
 
 This is a QGIS plugin with three helper tools for QGIS development purposes.
 
