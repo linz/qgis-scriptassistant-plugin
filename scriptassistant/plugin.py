@@ -200,16 +200,14 @@ class ScriptAssistant:
         QGIS scripts folder.
         """
         folder_dir = gui.settings_manager.load_setting("script_folder")
+        user_script_dir = os.path.join(
+            QgsApplication.qgisSettingsDirPath(), "processing", "scripts"
+        )
         if folder_dir:
             for filename in os.listdir(folder_dir):
                 if filename.endswith(".py") and not filename.startswith("_"):
                     if self.is_processing_script(os.path.join(folder_dir, filename)):
-                        # QGIS 2.14 has ScriptUtils.scriptsFolder()
-                        if QGis.QGIS_VERSION_INT < 21800:
-                            copy(os.path.join(folder_dir, filename), ScriptUtils.scriptsFolder())
-                        # QGIS 2.18 has ScriptUtils.scriptsFolders()[0]
-                        elif QGis.QGIS_VERSION_INT >= 21800:
-                            copy(os.path.join(folder_dir, filename), ScriptUtils.scriptsFolders()[0])
+                        copy(os.path.join(folder_dir, filename), user_script_dir)
             plugins["processing"].toolbox.updateProvider("script")
         else:
             self.iface.messageBar().pushMessage(
