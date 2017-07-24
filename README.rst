@@ -5,7 +5,7 @@ QGIS Script Assistant Plugin
 .. image:: https://img.shields.io/badge/License-BSD%203--Clause-blue.svg
     :target: https://github.com/linz/qgis-scriptassistant-plugin/blob/master/LICENSE
 
-.. image:: https://travis-ci.com/linz/qgis-scriptassistant-plugin.svg?token=K4ECbFVBqQndQscY6xjY&branch=master
+.. image:: https://travis-ci.org/linz/qgis-scriptassistant-plugin.svg?branch=master
     :target: https://travis-ci.org/linz/qgis-scriptassistant-plugin
 
 This is a QGIS plugin with three helper tools for QGIS development purposes:
@@ -25,12 +25,12 @@ Installation
 
 This plugin will soon be available through the official QGIS plugin repository.
 
-To install it for development purposes, clone this repository and then symlink the scriptassistant/ dir to ``/$user/.qgis2/python/plugins/scriptassistant``.
+To install it for development purposes, clone this repository and then symlink the ``/scriptassistant`` dir to ``/$user/.qgis2/python/plugins/scriptassistant``.
 
 Documentation
 =============
 
-See the full docs on readthedocs.
+See the full docs on `readthedocs <http://qgis-script-assistant-plugin.readthedocs.io/en/latest/index.html>`.
 
 Tests
 =====
@@ -42,4 +42,4 @@ Limitations
 
 * Scripts named in the format ``test_x.py`` must be within the test directory - subdirectories are ignored.
 * The ``tests_x.py`` script must have a ``run_tests`` function in order for tests to be called.
-* Only .shp (shapefile) format test data is supported.
+* Only ``.shp`` (shapefile) format test data is supported.
