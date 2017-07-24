@@ -30,7 +30,7 @@ To install it for development purposes, clone this repository and then symlink t
 Documentation
 =============
 
-See the full docs on `readthedocs <http://qgis-script-assistant-plugin.readthedocs.io/en/latest/index.html>`.
+See the full docs on `readthedocs <http://qgis-script-assistant-plugin.readthedocs.io/en/latest/index.html>`_.
 
 Tests
 =====
