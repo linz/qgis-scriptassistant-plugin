@@ -12,7 +12,7 @@ Here it is in action - testing itself:
 To learn more, check out the feature overview and configuration guide below.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
 
    overview
    configuration
