@@ -38,7 +38,7 @@ See the full docs on `readthedocs <http://qgis-script-assistant-plugin.readthedo
 Tests
 =====
 
-On installation, the plugin is configured to test itself. Click the Run Tests button to test.
+On installation, the plugin is configured to test itself. Click the Test Scripts button to test.
 
 Limitations
 ===========
