@@ -18,7 +18,10 @@ The plugin comes with one configuration pre-installed - this configuration allow
 .. image:: images/settings_dialog.png
     :align: center
 
-On install, you can immediately select the Run Tests button.
+On install, you can immediately select the Test Scripts button.
+
+.. image:: images/test_scripts.png
+    :align: center
 
 User settings
 -------------
@@ -28,7 +31,7 @@ To add a new Script Assistant configuration, change the name in the configuratio
 Don't reload tests setting
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This setting turns off the use of reload() to reload test modules. It'll run tests faster but the test won't update if it has been edited in an external text editor.
+This setting turns off the use of ``reload()`` to reload test modules. It'll run tests faster but the test won't update if it has been edited in an external text editor.
 
 Playback UI tests in slow motion setting
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

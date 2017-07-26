@@ -33,7 +33,7 @@ The test list
 
 The test list is constructed by finding any file in the configured test directory with a file name starting with ``test_`` and ending with ``.py``. It does not (currently) check folders within the test directory.
 
-Every time you select the dropdown to the right of the Run Tests button, the test list reloads from the tests directory. So if you're switching branches in git, you'll always be running the tests from the same branch you've checked out.
+Every time you select the dropdown to the right of the Test Scripts button, the test list reloads from the tests directory. So if you're switching branches in git, you'll always be running the tests from the same branch you've checked out.
 
 Running a test
 --------------
@@ -44,7 +44,7 @@ The QGIS Python Console will be opened (if it isn't already visible) to print te
 
 ``reload()`` is used to reload the test module. This allows the tests to be edited using an external text editor and then recompiled in QGIS. This functionality can be switched off in settings if it isn't required.
 
-Running a test will also apply that test as the default action for the Run Tests button - to repetitively run the same test, there is no need to select it from the test list again and again, just click on Run Tests after the first run.
+Running a test will also apply that test as the default action for the Test Scripts button - to repetitively run the same test, there is no need to select it from the test list again and again, just click on Test Scripts after the first run.
 
 Running all tests
 -----------------
@@ -54,9 +54,9 @@ There is always an additional option in the test list to run all tests. This opt
 Testing using Travis-CI
 -----------------------
 
-The plugin `repository <https://github.com/linz/qgis-scriptassistant-plugin`> contains an example of how to run these same tests using Travis-CI.
+The plugin `repository <https://github.com/linz/qgis-scriptassistant-plugin`>_ contains an example of how to run these same tests using Travis-CI.
 
-Thanks to boundlessgeo for making this possible using `qgis-testing-environment-docker <https://github.com/boundlessgeo/qgis-testing-environment-docker>`_!
+Thanks to Boundless for making this possible using `qgis-testing-environment-docker <https://github.com/boundlessgeo/qgis-testing-environment-docker>`_!
 
 Add Test Data
 =============
