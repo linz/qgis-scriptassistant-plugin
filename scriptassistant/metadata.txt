@@ -1,7 +1,7 @@
 [general]
 name=Script Assistant
-description=This plugin helps to reload and test Processing scripts
-about=This plugin moves and overwrites scripts in the default QGIS script location from another directory. Useful for example if you are modifying scripts in a .git repository and want to deploy them.
+description=This plugin helps to reload users scripts and test scripts and plugins
+about=This plugin moves and overwrites scripts in the default QGIS script location from another directory. Useful for example if you are modifying scripts in a .git repository and want to reload them to QGIS.
 version=dev
 
 qgisMinimumVersion=2.14
@@ -9,7 +9,7 @@ qgisMinimumVersion=2.14
 author=Land Information New Zealand
 email=dsilk@linz.govt.nz
 
-homepage=https://github.com/linz/qgis-scriptassistant-plugin
+homepage=http://qgis-script-assistant-plugin.readthedocs.io/en/latest/index.html
 repository=https://github.com/linz/qgis-scriptassistant-plugin
 tracker=https://github.com/linz/qgis-scriptassistant-plugin/issues
 changelog=https://github.com/linz/qgis-scriptassistant-plugin/blob/master/CHANGELOG.rst
@@ -17,7 +17,7 @@ changelog=https://github.com/linz/qgis-scriptassistant-plugin/blob/master/CHANGE
 tags=processing, development, testing
 
 category=Plugins
-icon=icon.png
+icon=images/test_scripts.png
 
-experimental=True
+experimental=False
 deprecated=False
