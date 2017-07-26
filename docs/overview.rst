@@ -54,7 +54,7 @@ There is always an additional option in the test list to run all tests. This opt
 Testing using Travis-CI
 -----------------------
 
-The plugin `repository <https://github.com/linz/qgis-scriptassistant-plugin`>_ contains an example of how to run these same tests using Travis-CI.
+The plugin `repository <https://github.com/linz/qgis-scriptassistant-plugin>`_ contains an example of how to run these same tests using Travis-CI.
 
 Thanks to Boundless for making this possible using `qgis-testing-environment-docker <https://github.com/boundlessgeo/qgis-testing-environment-docker>`_!
 

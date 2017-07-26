@@ -31,10 +31,16 @@ To add a new Script Assistant configuration, change the name in the configuratio
 Don't reload tests setting
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. image:: images/dont_reload.png
+    :align: center
+
 This setting turns off the use of ``reload()`` to reload test modules. It'll run tests faster but the test won't update if it has been edited in an external text editor.
 
 Playback UI tests in slow motion setting
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. image:: images/playback_ui_tests.png
+    :align: center
 
 This setting requires some additional code within the tests to actually do anything.
 
