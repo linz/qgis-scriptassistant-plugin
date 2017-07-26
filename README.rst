@@ -8,6 +8,9 @@ QGIS Script Assistant Plugin
 .. image:: https://travis-ci.org/linz/qgis-scriptassistant-plugin.svg?branch=master
     :target: https://travis-ci.org/linz/qgis-scriptassistant-plugin
 
+.. image:: https://img.shields.io/badge/docs-latest-brightgreen.svg?style=flat&maxAge=86400
+    :target: http://qgis-script-assistant-plugin.readthedocs.io/en/latest/?badge=latest
+
 This is a QGIS plugin with three helper tools for QGIS development purposes:
 
 * Reload processing user scripts into QGIS from any existing directory
@@ -35,7 +38,7 @@ See the full docs on `readthedocs <http://qgis-script-assistant-plugin.readthedo
 Tests
 =====
 
-On installation, the plugin is configured to test itself. Click the Run Tests button to test.
+On installation, the plugin is configured to test itself. Click the Test Scripts button to test.
 
 Limitations
 ===========
