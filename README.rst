@@ -2,6 +2,9 @@
 QGIS Script Assistant Plugin
 ============================
 
+.. image:: https://img.shields.io/badge/QGIS%20Python%20Plugin%20Repository-v0.4.1-brightgreen.svg
+    :target: https://plugins.qgis.org/plugins/scriptassistant/
+
 .. image:: https://img.shields.io/badge/License-BSD%203--Clause-blue.svg
     :target: https://github.com/linz/qgis-scriptassistant-plugin/blob/master/LICENSE
 
@@ -26,7 +29,7 @@ These tools make life easier if you:
 Installation
 ============
 
-This plugin will soon be available through the official QGIS plugin repository.
+The plugin can be installed in QGIS through the QGIS Official Plugin Repository.
 
 To install it for development purposes, clone this repository and then symlink the ``/scriptassistant`` dir to ``/$user/.qgis2/python/plugins/scriptassistant``.
 
