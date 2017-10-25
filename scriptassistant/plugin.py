@@ -188,7 +188,10 @@ class ScriptAssistant:
         tool_button = QToolButton()
         tool_button.setMenu(tool_button_menu)
         # The first action created is the default
-        tool_button.setDefaultAction(tool_button_menu.actions()[0])
+        try:
+            tool_button.setDefaultAction(tool_button_menu.actions()[0])
+        except IndexError:
+            pass
         tool_button.setPopupMode(QToolButton.MenuButtonPopup)
         self.toolbar.addWidget(tool_button)
         return tool_button
@@ -271,7 +274,7 @@ class ScriptAssistant:
         )
         self.test_script_menu.addAction(self.test_all_action)
 
-        if test_folder:
+        if os.path.isdir(test_folder):
             test_file_names = [
                 f[5:-3] for f in os.listdir(test_folder) if
                 f.startswith("test_") and f.endswith(".py")
@@ -493,7 +496,6 @@ class ScriptAssistant:
                 "current_configuration",
                 self.dlg_settings.cmb_config.lineEdit().text()
             )
-
 
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""

@@ -4,6 +4,14 @@ Change Log
 
 All notable changes to this project will be documented in this file.
 
+Unreleased
+==========
+
+Fixed
+-----
+
+ * Now handles test directories that were valid when configured but were later moved or deleted
+
 0.4.1 - 2017-07-27
 ==================
 
