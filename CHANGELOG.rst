@@ -7,6 +7,16 @@ All notable changes to this project will be documented in this file.
 Unreleased
 ==========
 
+Added
+-----
+
+ * A final summary of the test results is printed to the QGIS Python Console after all testing
+
+Changed
+-------
+
+ * Subfolders are now included in test discovery
+
 Fixed
 -----
 
