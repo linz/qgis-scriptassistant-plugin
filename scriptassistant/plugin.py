@@ -439,7 +439,7 @@ class ScriptAssistant:
 
         Optionally reload and view depending on settings.
         """
-        module = import_module("{0}".format(test_name))
+        module = import_module(test_name)
         # have to reload otherwise a QGIS restart is required after changes
         if gui.settings_manager.load_setting("no_reload") == "Y":
             pass
