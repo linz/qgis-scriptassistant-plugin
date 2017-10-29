@@ -243,6 +243,8 @@ class ScriptAssistant:
         """
         """
         self.test_script_menu.clear()
+        print "UPDATE"
+        print "ACTIONS: {}".format(self.test_script_menu.actions())
         self.create_test_script_menu()
         self.test_tool_button.setDefaultAction(self.test_script_action)
 
@@ -278,16 +280,17 @@ class ScriptAssistant:
         self.test_script_menu.addAction(self.test_all_action)
 
         if os.path.isdir(test_folder):
-            unique_test_modules = self.unique_test_modules(test_folder)
+            self.all_test_file_names = []
+            self.update_all_tests(test_folder)
 
-            for test_module_name in unique_test_modules:
+            for test_module_name in self.all_test_file_names:
                 action = self.add_action(
                     "test_scripts.png", test_module_name,
                     partial(self.prepare_test, test_module_name), True
                 )
                 self.test_script_menu.addAction(action)
 
-            if not gui.settings_manager.load_setting("current_test") in unique_test_modules:
+            if not gui.settings_manager.load_setting("current_test") in self.all_test_file_names:
                 gui.settings_manager.save_setting("current_test", "$ALL")
                 self.test_script_action.setText("Test: all")
 
@@ -295,33 +298,19 @@ class ScriptAssistant:
             self.test_script_action.setEnabled(False)
             self.test_all_action.setEnabled(False)
 
-    def unique_test_modules(self, test_folder):
-        """
-        Loops through all TestCase instances in a test folder to find
-        unique test modules
-        """
-        tests = unittest.TestLoader().discover(test_folder, pattern="test_*.py")
-        test_cases = self.all_test_cases(tests)
-
-        test_modules = []
-        for t in test_cases:
-            test_modules.append(type(t).__module__)
-        unique_test_modules = list(set(test_modules))
-        return unique_test_modules
-
-    def all_test_cases(self, test_suite, test_cases=[]):
-        """
-        Loops through the test suites discovered using unittest.TestLoader().discover()
-        to find all individual TestCase instances and return them in a list
-        """
-        for test_or_suite in test_suite:
-            if unittest.suite._isnotsuite(test_or_suite):
-                # confirmed test
-                test_cases.append(test_or_suite)
-            else:
-                # confirmed suite
-                self.all_test_cases(test_or_suite, test_cases)
-        return test_cases
+    def update_all_tests(self, test_folder):
+        print "START: {}".format(self.all_test_file_names)
+        if test_folder not in sys.path:
+            sys.path.append(test_folder)
+        test_file_names = [
+            f[:-3] for f in os.listdir(test_folder) if
+            f.startswith("test_") and f.endswith(".py")
+        ]
+        self.all_test_file_names.extend(test_file_names)
+        subdirs = [d[0] for d in os.walk(test_folder)]
+        for subdir in subdirs[1:]:
+            self.update_all_tests(subdir)
+        print "END: {}".format(self.all_test_file_names)
 
     @pyqtSlot()
     def prepare_test(self, test_name):
