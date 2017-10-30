@@ -63,6 +63,8 @@ class ScriptAssistant:
         # Initialise plugin dialog
         self.dlg_settings = SettingsDialog()
 
+        self.test_cases = []
+        self.test_modules = []
         self.aggregated_test_result = None
 
     def tr(self, message):
@@ -258,9 +260,6 @@ class ScriptAssistant:
                     self.tr("Please reconfigure the test folder."),
                     level=QgsMessageBar.CRITICAL,
                 )
-            # else:
-            #     if test_folder not in sys.path:
-            #         sys.path.append(test_folder)
 
         self.test_actions = []
         if self.test_script_action:
@@ -278,16 +277,18 @@ class ScriptAssistant:
         self.test_script_menu.addAction(self.test_all_action)
 
         if os.path.isdir(test_folder):
-            unique_test_modules = self.unique_test_modules(test_folder)
+            self.test_cases = []
+            self.test_modules = []
+            self.update_unique_test_modules(test_folder)
 
-            for test_module_name in unique_test_modules:
+            for test_module_name in self.test_modules:
                 action = self.add_action(
                     "test_scripts.png", test_module_name,
                     partial(self.prepare_test, test_module_name), True
                 )
                 self.test_script_menu.addAction(action)
 
-            if not gui.settings_manager.load_setting("current_test") in unique_test_modules:
+            if not gui.settings_manager.load_setting("current_test") in self.test_modules:
                 gui.settings_manager.save_setting("current_test", "$ALL")
                 self.test_script_action.setText("Test: all")
 
@@ -295,21 +296,22 @@ class ScriptAssistant:
             self.test_script_action.setEnabled(False)
             self.test_all_action.setEnabled(False)
 
-    def unique_test_modules(self, test_folder):
+    def update_unique_test_modules(self, test_folder):
         """
         Loops through all TestCase instances in a test folder to find
         unique test modules
         """
         tests = unittest.TestLoader().discover(test_folder, pattern="test_*.py")
-        test_cases = self.all_test_cases(tests)
+        self.update_all_test_cases(tests)
 
-        test_modules = []
-        for t in test_cases:
-            test_modules.append(type(t).__module__)
-        unique_test_modules = list(set(test_modules))
-        return unique_test_modules
+        all_test_modules = []
+        for t in self.test_cases:
+            all_test_modules.append(type(t).__module__)
+        unique_test_modules = list(set(all_test_modules))
+        self.test_modules = unique_test_modules
+        self.test_modules.sort()
 
-    def all_test_cases(self, test_suite, test_cases=[]):
+    def update_all_test_cases(self, test_suite):
         """
         Loops through the test suites discovered using unittest.TestLoader().discover()
         to find all individual TestCase instances and return them in a list
@@ -317,11 +319,10 @@ class ScriptAssistant:
         for test_or_suite in test_suite:
             if unittest.suite._isnotsuite(test_or_suite):
                 # confirmed test
-                test_cases.append(test_or_suite)
+                self.test_cases.append(test_or_suite)
             else:
                 # confirmed suite
-                self.all_test_cases(test_or_suite, test_cases)
-        return test_cases
+                self.update_all_test_cases(test_or_suite)
 
     @pyqtSlot()
     def prepare_test(self, test_name):
@@ -335,8 +336,9 @@ class ScriptAssistant:
             if test_name == "$ALL":
                 self.add_test_data_action.setEnabled(False)
                 test_folder = gui.settings_manager.load_setting("test_folder")
-                unique_test_modules = self.unique_test_modules(test_folder)
-                for test_module_name in unique_test_modules:
+                self.update_unique_test_modules(test_folder)
+
+                for test_module_name in self.test_modules:
                     result = self.run_test(test_module_name)
                     self.prepare_result(result)
             else:
