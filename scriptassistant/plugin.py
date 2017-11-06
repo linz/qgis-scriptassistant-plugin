@@ -365,48 +365,70 @@ class ScriptAssistant:
 
     def print_aggregated_result(self):
         """Print a summary of all tests to the QGIS Python Console"""
-        print ""
-        for e in self.aggregated_test_result.errors:
-            print e[0]
-            print "-" * len(e[0].__str__())
-            print e[1]
-        for f in self.aggregated_test_result.failures:
-            print f[0]
-            print "-" * len(f[0].__str__())
-            print f[1]
-        successes = self.aggregated_test_result.testsRun - (
-            len(self.aggregated_test_result.errors) +
-            len(self.aggregated_test_result.failures) +
-            len(self.aggregated_test_result.expectedFailures) +
-            len(self.aggregated_test_result.unexpectedSuccesses) +
-            len(self.aggregated_test_result.skipped)
-        )
-        print """
-+---------------------------+------------+
-| Successes                 |       {successes: >{fill}} |
-+---------------------------+------------+
-| Errors                    |       {errors: >{fill}} |
-+---------------------------+------------+
-| Failures                  |       {failures: >{fill}} |
-+---------------------------+------------+
-| Expected Failures         |       {expected: >{fill}} |
-+---------------------------+------------+
-| Unexpected Successes      |       {unexpected: >{fill}} |
-+---------------------------+------------+
-| Skipped                   |       {skipped: >{fill}} |
-+===========================+============+
+        if self.aggregated_test_result.testsRun:
+            print ""
+            for e in self.aggregated_test_result.errors:
+                print e[0]
+                print "-" * len(e[0].__str__())
+                print e[1]
+            for f in self.aggregated_test_result.failures:
+                print f[0]
+                print "-" * len(f[0].__str__())
+                print f[1]
+            successes = self.aggregated_test_result.testsRun - (
+                len(self.aggregated_test_result.errors) +
+                len(self.aggregated_test_result.failures) +
+                len(self.aggregated_test_result.expectedFailures) +
+                len(self.aggregated_test_result.unexpectedSuccesses) +
+                len(self.aggregated_test_result.skipped)
+            )
+
+            if successes:
+                print """+---------------------------+------------+
+| Successes                 |       {successes: >{fill}} |""".format(
+                    successes=successes,
+                    fill='4'
+                )
+            if len(self.aggregated_test_result.errors):
+                print """+---------------------------+------------+
+| Errors                    |       {errors: >{fill}} |""".format(
+                    errors=len(self.aggregated_test_result.errors),
+                    fill='4'
+                )
+            if len(self.aggregated_test_result.failures):
+                print """+---------------------------+------------+
+| Failures                  |       {failures: >{fill}} |""".format(
+                    failures=len(self.aggregated_test_result.failures),
+                    fill='4'
+                )
+            if len(self.aggregated_test_result.expectedFailures):
+                print """+---------------------------+------------+
+| Expected Failures         |       {expected: >{fill}} |""".format(
+                    expected=len(self.aggregated_test_result.expectedFailures),
+                    fill='4'
+                )
+            if len(self.aggregated_test_result.unexpectedSuccesses):
+                print """+---------------------------+------------+
+| Unexpected Successes      |       {unexpected: >{fill}} |""".format(
+                    unexpected=len(self.aggregated_test_result.unexpectedSuccesses),
+                    fill='4'
+                )
+            if len(self.aggregated_test_result.skipped):
+                print """+---------------------------+------------+
+| Skipped                   |       {skipped: >{fill}} |""".format(
+                    skipped=len(self.aggregated_test_result.skipped),
+                    fill='4'
+                )
+            print """+===========================+============+
 | Total                     |       {total: >{fill}} |
-+---------------------------+------------+
-        """.format(
-            successes=successes,
-            errors=len(self.aggregated_test_result.errors),
-            failures=len(self.aggregated_test_result.failures),
-            expected=len(self.aggregated_test_result.expectedFailures),
-            unexpected=len(self.aggregated_test_result.unexpectedSuccesses),
-            skipped=len(self.aggregated_test_result.skipped),
-            total=self.aggregated_test_result.testsRun,
-            fill='4'
-        )
++---------------------------+------------+""".format(
+                total=self.aggregated_test_result.testsRun,
+                fill='4'
+            )
+        else:
+            print ""
+            print "No tests were run."
+            print ""
 
     def open_python_console(self):
         """Ensures that the QGIS Python Console is visible to the user."""
@@ -446,7 +468,9 @@ class ScriptAssistant:
                 )
                 result = run_tests()
         else:
-            result = run_tests()
+            suite = unittest.TestLoader().loadTestsFromModule(module)
+            result = unittest.TextTestRunner(verbosity=2, stream=sys.stdout).run(suite)
+            # result = run_tests()
         return result
 
     @pyqtSlot()
