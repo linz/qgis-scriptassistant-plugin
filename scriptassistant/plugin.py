@@ -89,7 +89,6 @@ class ScriptAssistant:
                 gui.settings_manager.save_setting("script_folder", "")
                 gui.settings_manager.save_setting("test_folder", os.path.join(__location__, "tests"))
                 gui.settings_manager.save_setting("test_data_folder", "")
-                gui.settings_manager.save_setting("view_tests", "N")
                 gui.settings_manager.save_setting("no_reload", "N")
                 gui.settings_manager.save_setting("current_test", "$ALL")
 
@@ -100,7 +99,6 @@ class ScriptAssistant:
                 settings.setValue("test_data_folder", "")
                 settings.setValue("test_folder", os.path.join(__location__, "tests"))
                 settings.setValue("no_reload", "N")
-                settings.setValue("view_tests", "N")
                 settings.endArray()
 
         self.create_reload_action()
@@ -459,20 +457,8 @@ class ScriptAssistant:
             pass
         else:
             reload(module)
-        run_tests = getattr(module, "run_tests")
-        if gui.settings_manager.load_setting("view_tests") == "Y":
-            try:
-                result = run_tests(view_tests=True)
-            except TypeError:
-                self.iface.messageBar().pushMessage(
-                    self.tr("Could Not Repaint Widgets"),
-                    self.tr("Tests configured to repaint widgets, but test script doesn't support this."),
-                    level=QgsMessageBar.INFO,
-                )
-                result = run_tests()
-        else:
-            suite = unittest.TestLoader().loadTestsFromModule(module)
-            result = unittest.TextTestRunner(verbosity=2, stream=sys.stdout).run(suite)
+        suite = unittest.TestLoader().loadTestsFromModule(module)
+        result = unittest.TextTestRunner(verbosity=2, stream=sys.stdout).run(suite)
         return result
 
     @pyqtSlot()
@@ -504,12 +490,10 @@ class ScriptAssistant:
     def open_settings_dialog(self):
         """Open the settings dialog and show the current configuration."""
         self.dlg_settings.show()
-
         self.dlg_settings.populate_config_combo()
 
         if gui.settings_manager.load_setting("current_configuration"):
             self.dlg_settings.show_last_configuration()
-
             self.dlg_settings.check_changes()
 
         result = self.dlg_settings.exec_()
@@ -595,11 +579,6 @@ class ScriptAssistant:
             gui.settings_manager.save_setting("no_reload", "Y")
         else:
             gui.settings_manager.save_setting("no_reload", "N")
-
-        if self.dlg_settings.chk_repaint.isChecked():
-            gui.settings_manager.save_setting("view_tests", "Y")
-        else:
-            gui.settings_manager.save_setting("view_tests", "N")
 
         if self.dlg_settings.cmb_config.lineEdit().text():
             gui.settings_manager.save_setting(

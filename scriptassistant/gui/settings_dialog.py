@@ -44,7 +44,6 @@ class SettingsDialog(QDialog, FORM_CLASS):
         self.cmb_config.lineEdit().textChanged.connect(self.check_changes)
         self.cmb_config.currentIndexChanged.connect(self.check_changes)
         self.chk_reload.stateChanged.connect(self.check_changes)
-        self.chk_repaint.stateChanged.connect(self.check_changes)
 
     @pyqtSlot()
     def save_configuration(self):
@@ -55,10 +54,6 @@ class SettingsDialog(QDialog, FORM_CLASS):
             no_reload_value = "Y"
         else:
             no_reload_value = "N"
-        if self.chk_repaint.isChecked():
-            view_tests_value = "Y"
-        else:
-            view_tests_value = "N"
 
         # Save to system
         settings = QSettings(
@@ -86,7 +81,6 @@ class SettingsDialog(QDialog, FORM_CLASS):
         settings.setValue("test_data_folder", self.lne_test_data.text())
         settings.setValue("test_folder", self.lne_test.text())
         settings.setValue("no_reload", no_reload_value)
-        settings.setValue("view_tests", view_tests_value)
         settings.endArray()
 
         config_names = [self.cmb_config.itemText(i) for i in range(self.cmb_config.count())]
@@ -128,7 +122,6 @@ class SettingsDialog(QDialog, FORM_CLASS):
             settings.setValue("test_data_folder", config[item]["test_data_folder"])
             settings.setValue("test_folder", config[item]["test_folder"])
             settings.setValue("no_reload", config[item]["no_reload"])
-            settings.setValue("view_tests", config[item]["view_tests"])
         settings.endArray()
 
         if self.cmb_config.count() == 0:
@@ -137,7 +130,6 @@ class SettingsDialog(QDialog, FORM_CLASS):
             self.lne_test.setText("")
             self.lne_test_data.setText("")
             self.chk_reload.setChecked(False)
-            self.chk_repaint.setChecked(False)
         else:
             self.show_configuration()
 
@@ -158,7 +150,6 @@ class SettingsDialog(QDialog, FORM_CLASS):
                 "test_data_folder": settings.value("test_data_folder"),
                 "test_folder": settings.value("test_folder"),
                 "no_reload": settings.value("no_reload"),
-                "view_tests": settings.value("view_tests"),
             }
         settings.endArray()
         return config
@@ -179,10 +170,6 @@ class SettingsDialog(QDialog, FORM_CLASS):
             self.chk_reload.setChecked(True)
         elif settings.value("no_reload") == "N":
             self.chk_reload.setChecked(False)
-        if settings.value("view_tests") == "Y":
-            self.chk_repaint.setChecked(True)
-        elif settings.value("view_tests") == "N":
-            self.chk_repaint.setChecked(False)
         settings.endArray()
 
     @pyqtSlot()
@@ -227,10 +214,6 @@ class SettingsDialog(QDialog, FORM_CLASS):
             no_reload_value = "Y"
         else:
             no_reload_value = "N"
-        if self.chk_repaint.isChecked():
-            view_tests_value = "Y"
-        else:
-            view_tests_value = "N"
 
         # Retrieve from system
         settings = QSettings(
@@ -245,8 +228,7 @@ class SettingsDialog(QDialog, FORM_CLASS):
                 self.lne_script.text() == settings.value("script_folder") and \
                 self.lne_test.text() == settings.value("test_folder") and \
                 self.lne_test_data.text() == settings.value("test_data_folder") and \
-                no_reload_value == settings.value("no_reload") and \
-                view_tests_value == settings.value("view_tests"):
+                no_reload_value == settings.value("no_reload"):
             self.btn_save.setEnabled(False)
             self.setWindowTitle("Script Assistant Configuration")
         else:
@@ -293,10 +275,6 @@ class SettingsDialog(QDialog, FORM_CLASS):
             self.chk_reload.setChecked(True)
         elif settings_manager.load_setting("no_reload") == "N":
             self.chk_reload.setChecked(False)
-        if settings_manager.load_setting("view_tests") == "Y":
-            self.chk_repaint.setChecked(True)
-        elif settings_manager.load_setting("view_tests") == "N":
-            self.chk_repaint.setChecked(False)
 
     def closeEvent(self, event):
         self.closingDialog.emit()

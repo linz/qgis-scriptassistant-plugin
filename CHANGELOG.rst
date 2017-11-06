@@ -17,6 +17,11 @@ Changed
 
  * Subfolders are now included in test discovery
 
+Removed
+-------
+
+ * The option to run plugin tests with a delay and repaint has been removed due to inconsistent behaviour
+
 Fixed
 -----
 
