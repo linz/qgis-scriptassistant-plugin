@@ -378,18 +378,27 @@ class ScriptAssistant:
         """Print a summary of all tests to the QGIS Python Console"""
         if self.aggregated_test_result.testsRun:
             print ""
-            for e in self.aggregated_test_result.errors:
-                print e[0]
-                print "-" * len(e[0].__str__())
-                print e[1]
+            if self.aggregated_test_result.errors:
+                print "ERRORS:\n"
+                for error in self.aggregated_test_result.errors:
+                    print error[0]
+                    print "-" * len(error[0].__str__())
+                    print "{0}\n".format(error[1])
+            if self.aggregated_test_result.failures:
+                print "FAILURES:\n"
+                for failure in self.aggregated_test_result.failures:
+                    print failure[0]
+                    print "-" * len(failure[0].__str__())
+                    print "{0}\n".format(failure[1])
+            if self.aggregated_test_result.unexpectedSuccesses:
+                print "UNEXPECTED SUCCESSES:\n"
+                for unexpected in self.aggregated_test_result.unexpectedSuccesses:
+                    print unexpected
                 print ""
-            for f in self.aggregated_test_result.failures:
-                print f[0]
-                print "-" * len(f[0].__str__())
-                print f[1]
-                print ""
-            for g in self.aggregated_test_result.unexpectedSuccesses:
-                print "UNEXPECTED SUCCESS: {0}".format(g)
+            if self.aggregated_test_result.skipped:
+                print "SKIPPED:\n"
+                for skip in self.aggregated_test_result.skipped:
+                    print "{0} - {1}".format(skip[0], skip[1])
                 print ""
 
             successes = self.aggregated_test_result.testsRun - (
@@ -400,12 +409,18 @@ class ScriptAssistant:
                 len(self.aggregated_test_result.skipped)
             )
 
-            self.print_table_row("Successes", successes)
-            self.print_table_row("Errors", len(self.aggregated_test_result.errors))
-            self.print_table_row("Failures", len(self.aggregated_test_result.failures))
-            self.print_table_row("Expected Failures", len(self.aggregated_test_result.expectedFailures))
-            self.print_table_row("Unexpected Successes", len(self.aggregated_test_result.unexpectedSuccesses))
-            self.print_table_row("Skipped", len(self.aggregated_test_result.skipped))
+            self.print_table_row(
+                "Successes", successes)
+            self.print_table_row(
+                "Errors", len(self.aggregated_test_result.errors))
+            self.print_table_row(
+                "Failures", len(self.aggregated_test_result.failures))
+            self.print_table_row(
+                "Expected Failures", len(self.aggregated_test_result.expectedFailures))
+            self.print_table_row(
+                "Unexpected Successes", len(self.aggregated_test_result.unexpectedSuccesses))
+            self.print_table_row(
+                "Skipped", len(self.aggregated_test_result.skipped))
 
             print """+===========================+============+
 | Total                     |       {total: >{fill}} |
@@ -416,9 +431,7 @@ class ScriptAssistant:
             )
 
         else:
-            print ""
-            print "No tests were run."
-            print ""
+            print "\nNo tests were run.\n"
 
     @staticmethod
     def print_table_row(result_type, count):
