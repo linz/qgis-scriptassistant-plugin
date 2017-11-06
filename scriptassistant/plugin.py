@@ -378,48 +378,60 @@ class ScriptAssistant:
 
     def print_aggregated_result(self):
         """Print a summary of all tests to the QGIS Python Console"""
-        print ""
-        for e in self.aggregated_test_result.errors:
-            print e[0]
-            print "-" * len(e[0].__str__())
-            print e[1]
-        for f in self.aggregated_test_result.failures:
-            print f[0]
-            print "-" * len(f[0].__str__())
-            print f[1]
-        successes = self.aggregated_test_result.testsRun - (
-            len(self.aggregated_test_result.errors) +
-            len(self.aggregated_test_result.failures) +
-            len(self.aggregated_test_result.expectedFailures) +
-            len(self.aggregated_test_result.unexpectedSuccesses) +
-            len(self.aggregated_test_result.skipped)
-        )
-        print """
-+---------------------------+------------+
-| Successes                 |       {successes: >{fill}} |
-+---------------------------+------------+
-| Errors                    |       {errors: >{fill}} |
-+---------------------------+------------+
-| Failures                  |       {failures: >{fill}} |
-+---------------------------+------------+
-| Expected Failures         |       {expected: >{fill}} |
-+---------------------------+------------+
-| Unexpected Successes      |       {unexpected: >{fill}} |
-+---------------------------+------------+
-| Skipped                   |       {skipped: >{fill}} |
-+===========================+============+
+        if self.aggregated_test_result.testsRun:
+            print ""
+            for e in self.aggregated_test_result.errors:
+                print e[0]
+                print "-" * len(e[0].__str__())
+                print e[1]
+                print ""
+            for f in self.aggregated_test_result.failures:
+                print f[0]
+                print "-" * len(f[0].__str__())
+                print f[1]
+                print ""
+            for g in self.aggregated_test_result.unexpectedSuccesses:
+                print "UNEXPECTED SUCCESS: {0}".format(g)
+                print ""
+
+            successes = self.aggregated_test_result.testsRun - (
+                len(self.aggregated_test_result.errors) +
+                len(self.aggregated_test_result.failures) +
+                len(self.aggregated_test_result.expectedFailures) +
+                len(self.aggregated_test_result.unexpectedSuccesses) +
+                len(self.aggregated_test_result.skipped)
+            )
+
+            self.print_table_row("Successes", successes)
+            self.print_table_row("Errors", len(self.aggregated_test_result.errors))
+            self.print_table_row("Failures", len(self.aggregated_test_result.failures))
+            self.print_table_row("Expected Failures", len(self.aggregated_test_result.expectedFailures))
+            self.print_table_row("Unexpected Successes", len(self.aggregated_test_result.unexpectedSuccesses))
+            self.print_table_row("Skipped", len(self.aggregated_test_result.skipped))
+
+            print """+===========================+============+
 | Total                     |       {total: >{fill}} |
 +---------------------------+------------+
-        """.format(
-            successes=successes,
-            errors=len(self.aggregated_test_result.errors),
-            failures=len(self.aggregated_test_result.failures),
-            expected=len(self.aggregated_test_result.expectedFailures),
-            unexpected=len(self.aggregated_test_result.unexpectedSuccesses),
-            skipped=len(self.aggregated_test_result.skipped),
-            total=self.aggregated_test_result.testsRun,
-            fill='4'
-        )
+            """.format(
+                total=self.aggregated_test_result.testsRun,
+                fill='4'
+            )
+
+        else:
+            print ""
+            print "No tests were run."
+            print ""
+
+    @staticmethod
+    def print_table_row(result_type, count):
+        if count:
+            print """+---------------------------+------------+
+| {result_type: <{text_fill}} | {count: >{count_fill}} |""".format(
+                result_type=result_type,
+                text_fill='25',
+                count=count,
+                count_fill='10'
+            )
 
     def open_python_console(self):
         """Ensures that the QGIS Python Console is visible to the user."""
