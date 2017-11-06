@@ -56,7 +56,6 @@ class ScriptAssistantSettingsTest(unittest.TestCase):
             self.assertEqual(self.dlg.lne_test.text(), "")
             self.assertEqual(self.dlg.lne_test_data.text(), "")
             self.assertFalse(self.dlg.chk_reload.isChecked())
-            self.assertFalse(self.dlg.chk_repaint.isChecked())
             self.assertIn("*", self.dlg.windowTitle())
         else:
             self.assertEqual(count - 1, self.dlg.cmb_config.count())
@@ -65,7 +64,6 @@ class ScriptAssistantSettingsTest(unittest.TestCase):
         self.dlg.lne_test.setText(__location__)
         self.dlg.lne_test_data.setText("")
         self.dlg.chk_reload.setChecked(False)
-        self.dlg.chk_repaint.setChecked(True)
         self.dlg.btn_save.clicked.emit(True)
 
     def test_adding_new_settings(self):
