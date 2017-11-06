@@ -471,7 +471,8 @@ class ScriptAssistant:
                 )
                 result = run_tests()
         else:
-            result = run_tests()
+            suite = unittest.TestLoader().loadTestsFromModule(module)
+            result = unittest.TextTestRunner(verbosity=2, stream=sys.stdout).run(suite)
         return result
 
     @pyqtSlot()
