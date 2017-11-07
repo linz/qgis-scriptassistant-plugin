@@ -36,16 +36,6 @@ Don't reload tests setting
 
 This setting turns off the use of ``reload()`` to reload test modules. It'll run tests faster but the test won't update if it has been edited in an external text editor.
 
-Playback UI tests in slow motion setting
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. image:: images/playback_ui_tests.png
-    :align: center
-
-This setting requires some additional code within the tests to actually do anything.
-
-This setting simply calls ``test_x.run_tests(view_tests=True)`` instead of ``test_x.run_tests()``. The ``view_tests`` parameter is used to include a function in testing that repaints Qt widgets and sleeps for a designated time period. This allows UI tests to be visualised.
-
 Directory validation
 --------------------
 

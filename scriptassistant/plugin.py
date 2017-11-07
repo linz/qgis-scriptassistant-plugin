@@ -3,6 +3,7 @@
 import os
 import sys
 import re
+import unittest
 from importlib import import_module
 from shutil import copy
 from functools import partial
@@ -62,6 +63,10 @@ class ScriptAssistant:
         # Initialise plugin dialog
         self.dlg_settings = SettingsDialog()
 
+        self.test_cases = []
+        self.test_modules = []
+        self.aggregated_test_result = None
+
     def tr(self, message):
         """Get the translation for a string using Qt translation API.
 
@@ -84,7 +89,6 @@ class ScriptAssistant:
                 gui.settings_manager.save_setting("script_folder", "")
                 gui.settings_manager.save_setting("test_folder", os.path.join(__location__, "tests"))
                 gui.settings_manager.save_setting("test_data_folder", "")
-                gui.settings_manager.save_setting("view_tests", "N")
                 gui.settings_manager.save_setting("no_reload", "N")
                 gui.settings_manager.save_setting("current_test", "$ALL")
 
@@ -95,7 +99,6 @@ class ScriptAssistant:
                 settings.setValue("test_data_folder", "")
                 settings.setValue("test_folder", os.path.join(__location__, "tests"))
                 settings.setValue("no_reload", "N")
-                settings.setValue("view_tests", "N")
                 settings.endArray()
 
         self.create_reload_action()
@@ -188,7 +191,10 @@ class ScriptAssistant:
         tool_button = QToolButton()
         tool_button.setMenu(tool_button_menu)
         # The first action created is the default
-        tool_button.setDefaultAction(tool_button_menu.actions()[0])
+        try:
+            tool_button.setDefaultAction(tool_button_menu.actions()[0])
+        except IndexError:
+            pass
         tool_button.setPopupMode(QToolButton.MenuButtonPopup)
         self.toolbar.addWidget(tool_button)
         return tool_button
@@ -252,9 +258,6 @@ class ScriptAssistant:
                     self.tr("Please reconfigure the test folder."),
                     level=QgsMessageBar.CRITICAL,
                 )
-            else:
-                if test_folder not in sys.path:
-                    sys.path.append(test_folder)
 
         self.test_actions = []
         if self.test_script_action:
@@ -271,19 +274,19 @@ class ScriptAssistant:
         )
         self.test_script_menu.addAction(self.test_all_action)
 
-        if test_folder:
-            test_file_names = [
-                f[5:-3] for f in os.listdir(test_folder) if
-                f.startswith("test_") and f.endswith(".py")
-            ]
-            for test_name in test_file_names:
+        if os.path.isdir(test_folder):
+            self.test_cases = []
+            self.test_modules = []
+            self.update_unique_test_modules(test_folder)
+
+            for test_module_name in self.test_modules:
                 action = self.add_action(
-                    "test_scripts.png", test_name,
-                    partial(self.prepare_test, test_name), True
+                    "test_scripts.png", test_module_name,
+                    partial(self.prepare_test, test_module_name), True
                 )
                 self.test_script_menu.addAction(action)
 
-            if not gui.settings_manager.load_setting("current_test") in test_file_names:
+            if not gui.settings_manager.load_setting("current_test") in self.test_modules:
                 gui.settings_manager.save_setting("current_test", "$ALL")
                 self.test_script_action.setText("Test: all")
 
@@ -291,28 +294,59 @@ class ScriptAssistant:
             self.test_script_action.setEnabled(False)
             self.test_all_action.setEnabled(False)
 
+    def update_unique_test_modules(self, test_folder):
+        """
+        Loops through all TestCase instances in a test folder to find
+        unique test modules
+        """
+        tests = unittest.TestLoader().discover(test_folder, pattern="test_*.py")
+        self.update_all_test_cases(tests)
+
+        all_test_modules = []
+        for t in self.test_cases:
+            all_test_modules.append(type(t).__module__)
+        unique_test_modules = list(set(all_test_modules))
+        self.test_modules = unique_test_modules
+        self.test_modules.sort()
+
+    def update_all_test_cases(self, test_suite):
+        """
+        Loops through the test suites discovered using unittest.TestLoader().discover()
+        to find all individual TestCase instances and return them in a list
+        """
+        for test_or_suite in test_suite:
+            if unittest.suite._isnotsuite(test_or_suite):
+                # confirmed test
+                self.test_cases.append(test_or_suite)
+            else:
+                # confirmed suite
+                self.update_all_test_cases(test_or_suite)
+
     @pyqtSlot()
     def prepare_test(self, test_name):
         """Open the QGIS Python Console. Handle testing all tests."""
         self.open_python_console()
         gui.settings_manager.save_setting("current_test", test_name)
         self.update_test_script_menu()
+
         if test_name:
+            self.aggregated_test_result = unittest.TestResult()
             if test_name == "$ALL":
                 self.add_test_data_action.setEnabled(False)
                 test_folder = gui.settings_manager.load_setting("test_folder")
-                test_file_names = [
-                    f[5:-3] for f in os.listdir(test_folder) if
-                    f.startswith("test_") and f.endswith(".py")
-                ]
-                for actual_test_name in test_file_names:
-                    self.run_test(actual_test_name)
+                self.update_unique_test_modules(test_folder)
+
+                for test_module_name in self.test_modules:
+                    result = self.run_test(test_module_name)
+                    self.prepare_result(result)
             else:
                 if not self.add_test_data_action.isEnabled():
                     test_data_folder = gui.settings_manager.load_setting("test_data_folder")
                     if os.path.isdir(test_data_folder):
                         self.add_test_data_action.setEnabled(True)
-                self.run_test(test_name)
+                result = self.run_test(test_name)
+                self.prepare_result(result)
+            self.print_aggregated_result()
         else:
             # Ideally the button would be disabled, but that isn't possible
             # with QToolButton without odd workarounds
@@ -320,6 +354,94 @@ class ScriptAssistant:
                 self.tr("No Test Script Configured"),
                 self.tr("Please configure a script to test first."),
                 level=QgsMessageBar.CRITICAL,
+            )
+
+    def prepare_result(self, result):
+        """Extend aggregated TestResult"""
+        if result:
+            self.aggregated_test_result.errors.extend(result.errors)
+            self.aggregated_test_result.failures.extend(result.failures)
+            self.aggregated_test_result.expectedFailures.extend(
+                result.expectedFailures)
+            self.aggregated_test_result.unexpectedSuccesses.extend(
+                result.unexpectedSuccesses)
+            self.aggregated_test_result.skipped.extend(result.skipped)
+            self.aggregated_test_result.testsRun += result.testsRun
+        else:
+            self.iface.messageBar().pushMessage(
+                self.tr("No Test Summary"),
+                self.tr("Test summary could not be provided to output as the run_tests method does not return a result."),
+                level=QgsMessageBar.WARNING,
+            )
+
+    def print_aggregated_result(self):
+        """Print a summary of all tests to the QGIS Python Console"""
+        if self.aggregated_test_result.testsRun:
+            print ""
+            if self.aggregated_test_result.errors:
+                print "ERRORS:\n"
+                for error in self.aggregated_test_result.errors:
+                    print error[0]
+                    print "-" * len(error[0].__str__())
+                    print "{0}\n".format(error[1])
+            if self.aggregated_test_result.failures:
+                print "FAILURES:\n"
+                for failure in self.aggregated_test_result.failures:
+                    print failure[0]
+                    print "-" * len(failure[0].__str__())
+                    print "{0}\n".format(failure[1])
+            if self.aggregated_test_result.unexpectedSuccesses:
+                print "UNEXPECTED SUCCESSES:\n"
+                for unexpected in self.aggregated_test_result.unexpectedSuccesses:
+                    print unexpected
+                print ""
+            if self.aggregated_test_result.skipped:
+                print "SKIPPED:\n"
+                for skip in self.aggregated_test_result.skipped:
+                    print "{0} - {1}".format(skip[0], skip[1])
+                print ""
+
+            successes = self.aggregated_test_result.testsRun - (
+                len(self.aggregated_test_result.errors) +
+                len(self.aggregated_test_result.failures) +
+                len(self.aggregated_test_result.expectedFailures) +
+                len(self.aggregated_test_result.unexpectedSuccesses) +
+                len(self.aggregated_test_result.skipped)
+            )
+
+            self.print_table_row(
+                "Successes", successes)
+            self.print_table_row(
+                "Errors", len(self.aggregated_test_result.errors))
+            self.print_table_row(
+                "Failures", len(self.aggregated_test_result.failures))
+            self.print_table_row(
+                "Expected Failures", len(self.aggregated_test_result.expectedFailures))
+            self.print_table_row(
+                "Unexpected Successes", len(self.aggregated_test_result.unexpectedSuccesses))
+            self.print_table_row(
+                "Skipped", len(self.aggregated_test_result.skipped))
+
+            print """+===========================+============+
+| Total                     |       {total: >{fill}} |
++---------------------------+------------+
+            """.format(
+                total=self.aggregated_test_result.testsRun,
+                fill='4'
+            )
+
+        else:
+            print "\nNo tests were run.\n"
+
+    @staticmethod
+    def print_table_row(result_type, count):
+        if count:
+            print """+---------------------------+------------+
+| {result_type: <{text_fill}} | {count: >{count_fill}} |""".format(
+                result_type=result_type,
+                text_fill='25',
+                count=count,
+                count_fill='10'
             )
 
     def open_python_console(self):
@@ -342,25 +464,15 @@ class ScriptAssistant:
 
         Optionally reload and view depending on settings.
         """
-        module = import_module("test_{0}".format(test_name))
+        module = import_module(test_name)
         # have to reload otherwise a QGIS restart is required after changes
         if gui.settings_manager.load_setting("no_reload") == "Y":
             pass
         else:
             reload(module)
-        run_tests = getattr(module, "run_tests")
-        if gui.settings_manager.load_setting("view_tests") == "Y":
-            try:
-                run_tests(view_tests=True)
-            except TypeError:
-                self.iface.messageBar().pushMessage(
-                    self.tr("Could Not Repaint Widgets"),
-                    self.tr("Tests configured to repaint widgets, but test script doesn't support this."),
-                    level=QgsMessageBar.INFO,
-                )
-                run_tests()
-        else:
-            run_tests()
+        suite = unittest.TestLoader().loadTestsFromModule(module)
+        result = unittest.TextTestRunner(verbosity=2, stream=sys.stdout).run(suite)
+        return result
 
     @pyqtSlot()
     def add_test_data_to_map(self):
@@ -391,12 +503,10 @@ class ScriptAssistant:
     def open_settings_dialog(self):
         """Open the settings dialog and show the current configuration."""
         self.dlg_settings.show()
-
         self.dlg_settings.populate_config_combo()
 
         if gui.settings_manager.load_setting("current_configuration"):
             self.dlg_settings.show_last_configuration()
-
             self.dlg_settings.check_changes()
 
         result = self.dlg_settings.exec_()
@@ -483,17 +593,11 @@ class ScriptAssistant:
         else:
             gui.settings_manager.save_setting("no_reload", "N")
 
-        if self.dlg_settings.chk_repaint.isChecked():
-            gui.settings_manager.save_setting("view_tests", "Y")
-        else:
-            gui.settings_manager.save_setting("view_tests", "N")
-
         if self.dlg_settings.cmb_config.lineEdit().text():
             gui.settings_manager.save_setting(
                 "current_configuration",
                 self.dlg_settings.cmb_config.lineEdit().text()
             )
-
 
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""

@@ -4,14 +4,12 @@
 testing Script Assistant plugin functionality.
 """
 
-import sys
 import os
 import unittest
 from shutil import copy
 
 from qgis.core import QgsVectorLayer
-from qgis.gui import QgsMessageBar
-from qgis.utils import plugins, QGis, iface
+from qgis.utils import plugins, QGis
 
 import processing
 from processing.core.Processing import Processing
@@ -65,25 +63,3 @@ class AddAreaColumnTest(unittest.TestCase):
     def test_valid_output(self):
         """Ensure that an output layer has been created with expected rows."""
         self.assertEqual(output_layer.featureCount(), 1)
-
-
-def run_tests():
-    """
-    Implements a TextTestRunner, which is a basic test runner implementation
-    that prints results on standard error.
-    """
-    suite = unittest.TestSuite()
-    suite.addTests(unittest.makeSuite(AddAreaColumnTest, "test"))
-    result = unittest.TextTestRunner(verbosity=2, stream=sys.stdout).run(suite)
-    if result.wasSuccessful():
-        iface.messageBar().pushMessage(
-            "All Tests Passed",
-            "Testing was successful.",
-            level=QgsMessageBar.SUCCESS,
-        )
-    else:
-        iface.messageBar().pushMessage(
-            "Test Failure",
-            "Testing was not successful.",
-            level=QgsMessageBar.CRITICAL,
-        )

@@ -4,6 +4,29 @@ Change Log
 
 All notable changes to this project will be documented in this file.
 
+Unreleased
+==========
+
+Added
+-----
+
+ * A final summary of the test results is printed to the QGIS Python Console after all testing
+
+Changed
+-------
+
+ * Subfolders are now included in test discovery
+
+Removed
+-------
+
+ * The option to run plugin tests with a delay and repaint has been removed due to inconsistent behaviour
+
+Fixed
+-----
+
+ * Now handles test directories that were valid when configured but were later moved or deleted
+
 0.4.1 - 2017-07-27
 ==================
 
