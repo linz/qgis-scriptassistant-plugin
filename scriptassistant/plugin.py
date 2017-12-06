@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import coverage
 import os
 import sys
 import re
@@ -209,6 +210,7 @@ class ScriptAssistant:
         user_script_dir = os.path.join(
             QgsApplication.qgisSettingsDirPath(), "processing", "scripts"
         )
+
         if folder_dir:
             for filename in os.listdir(folder_dir):
                 if filename.endswith(".py") and not filename.startswith("_"):
@@ -249,7 +251,17 @@ class ScriptAssistant:
     def create_test_script_menu(self):
         """
         """
+
         test_folder = gui.settings_manager.load_setting("test_folder")
+
+        # Coverage
+        print test_folder
+
+        cov = coverage.Coverage(
+            omit="{}/test_*.py".format(test_folder),
+            include="~/dev/plugins/qgis-roads-plugin/roads/*.py",)
+        print cov
+        cov.start()
 
         if test_folder:
             if not os.path.isdir(test_folder):
@@ -265,12 +277,12 @@ class ScriptAssistant:
 
         self.test_script_action = self.add_action(
             "test_scripts.png", "Test: {}".format(gui.settings_manager.load_setting("current_test")),
-            partial(self.prepare_test, gui.settings_manager.load_setting("current_test"))
+            partial(self.prepare_test, gui.settings_manager.load_setting("current_test"), cov=cov)
         )
         self.test_script_menu.addAction(self.test_script_action)
         self.test_all_action = self.add_action(
             "test_scripts.png", "all in: {}".format(test_folder),
-            partial(self.prepare_test, "$ALL"), True
+            partial(self.prepare_test, "$ALL", cov=cov), True
         )
         self.test_script_menu.addAction(self.test_all_action)
 
@@ -282,7 +294,7 @@ class ScriptAssistant:
             for test_module_name in self.test_modules:
                 action = self.add_action(
                     "test_scripts.png", test_module_name,
-                    partial(self.prepare_test, test_module_name), True
+                    partial(self.prepare_test, test_module_name, cov=cov), True
                 )
                 self.test_script_menu.addAction(action)
 
@@ -323,14 +335,16 @@ class ScriptAssistant:
                 self.update_all_test_cases(test_or_suite)
 
     @pyqtSlot()
-    def prepare_test(self, test_name):
+    def prepare_test(self, test_name, cov=None):
         """Open the QGIS Python Console. Handle testing all tests."""
         self.open_python_console()
-        gui.settings_manager.save_setting("current_test", test_name)
+
         self.update_test_script_menu()
 
         if test_name:
             self.aggregated_test_result = unittest.TestResult()
+
+            gui.settings_manager.save_setting("current_test", test_name)
             if test_name == "$ALL":
                 self.add_test_data_action.setEnabled(False)
                 test_folder = gui.settings_manager.load_setting("test_folder")
@@ -347,6 +361,16 @@ class ScriptAssistant:
                 result = self.run_test(test_name)
                 self.prepare_result(result)
             self.print_aggregated_result()
+            if cov:
+                data = cov.get_data()
+                print data
+                print dir(data)
+                print data.lines("~/dev/plugins/qgis-roads-plugin/roads/tasks/controller.py")
+                print cov.analysis2("~/dev/plugins/qgis-roads-plugin/roads/tasks/controller.py")
+                cov.stop()
+                cov.save()
+                print cov.report()
+
         else:
             # Ideally the button would be disabled, but that isn't possible
             # with QToolButton without odd workarounds
