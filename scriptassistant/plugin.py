@@ -26,6 +26,8 @@ from gui.settings_dialog import SettingsDialog
 __location__ = os.path.realpath(
     os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
+cov = None
+
 
 class ScriptAssistant:
     """QGIS Plugin Implementation."""
@@ -255,12 +257,12 @@ class ScriptAssistant:
         test_folder = gui.settings_manager.load_setting("test_folder")
 
         # Coverage
-        print test_folder
-
+        global cov
         cov = coverage.Coverage(
             omit="{}/test_*.py".format(test_folder),
-            include="~/dev/plugins/qgis-roads-plugin/roads/*.py",)
-        print cov
+            include="{}/*.py".format(os.path.dirname(test_folder))
+        )
+        # TODO: where could parent dir be grabbed from for include
         cov.start()
 
         if test_folder:
@@ -277,12 +279,12 @@ class ScriptAssistant:
 
         self.test_script_action = self.add_action(
             "test_scripts.png", "Test: {}".format(gui.settings_manager.load_setting("current_test")),
-            partial(self.prepare_test, gui.settings_manager.load_setting("current_test"), cov=cov)
+            partial(self.prepare_test, gui.settings_manager.load_setting("current_test"))
         )
         self.test_script_menu.addAction(self.test_script_action)
         self.test_all_action = self.add_action(
             "test_scripts.png", "all in: {}".format(test_folder),
-            partial(self.prepare_test, "$ALL", cov=cov), True
+            partial(self.prepare_test, "$ALL"), True
         )
         self.test_script_menu.addAction(self.test_all_action)
 
@@ -294,7 +296,7 @@ class ScriptAssistant:
             for test_module_name in self.test_modules:
                 action = self.add_action(
                     "test_scripts.png", test_module_name,
-                    partial(self.prepare_test, test_module_name, cov=cov), True
+                    partial(self.prepare_test, test_module_name), True
                 )
                 self.test_script_menu.addAction(action)
 
@@ -335,9 +337,10 @@ class ScriptAssistant:
                 self.update_all_test_cases(test_or_suite)
 
     @pyqtSlot()
-    def prepare_test(self, test_name, cov=None):
+    def prepare_test(self, test_name):
         """Open the QGIS Python Console. Handle testing all tests."""
         self.open_python_console()
+
 
         self.update_test_script_menu()
 
@@ -361,15 +364,15 @@ class ScriptAssistant:
                 result = self.run_test(test_name)
                 self.prepare_result(result)
             self.print_aggregated_result()
+
+            # Print coverage report
             if cov:
+                global cov
                 data = cov.get_data()
-                print data
-                print dir(data)
-                print data.lines("~/dev/plugins/qgis-roads-plugin/roads/tasks/controller.py")
-                print cov.analysis2("~/dev/plugins/qgis-roads-plugin/roads/tasks/controller.py")
                 cov.stop()
                 cov.save()
                 print cov.report()
+                cov = None
 
         else:
             # Ideally the button would be disabled, but that isn't possible
