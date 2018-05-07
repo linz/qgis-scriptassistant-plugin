@@ -1,0 +1,9 @@
+### User Story
+
+In order to [accomplish goal] as a [role] I want [capability] 
+(optional: instead of [existing behaviour]).
+
+#### Acceptance Criteria
+- [ ] ...
+- [ ] ...
+- [ ] ...
