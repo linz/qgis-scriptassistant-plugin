@@ -3,12 +3,12 @@
 import os
 from functools import partial
 
-from PyQt4 import uic
-from PyQt4.QtGui import QDialog, QFileDialog
-from PyQt4.QtCore import pyqtSignal, pyqtSlot, QSettings
+from qgis.PyQt import uic
+from qgis.PyQt.QtWidgets import QDialog, QFileDialog
+from qgis.PyQt.QtCore import pyqtSignal, pyqtSlot, QSettings
 from qgis.core import QgsApplication
 
-import settings_manager
+from . import settings_manager
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), "settings_dialog.ui"))
@@ -64,7 +64,7 @@ class SettingsDialog(QDialog, FORM_CLASS):
         size = settings.beginReadArray("script_assistant")
 
         # Check if the config already exists. If it does, overwrite it.
-        for i in xrange(size):
+        for i in range(size):
             settings.setArrayIndex(i)
             if settings.value("configuration") == new_config:
                 config_index = i
@@ -142,7 +142,7 @@ class SettingsDialog(QDialog, FORM_CLASS):
         )
         size = settings.beginReadArray("script_assistant")
         config = {}
-        for i in xrange(size):
+        for i in range(size):
             settings.setArrayIndex(i)
             config[i] = {
                 "configuration": settings.value("configuration"),

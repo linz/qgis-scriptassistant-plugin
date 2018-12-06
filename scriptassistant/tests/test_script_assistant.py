@@ -102,7 +102,6 @@ class ScriptAssistantSettingsTest(unittest.TestCase):
                 "processing", "scripts", "add_area_column.py"
             )
         )
-        plugins["processing"].toolbox.updateProvider("script")
 
     def test_running_plugin_test(self):
         self.dlg.lne_test.setText(os.path.join(__location__, "tests"))

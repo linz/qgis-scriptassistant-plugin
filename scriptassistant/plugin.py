@@ -7,19 +7,20 @@ import unittest
 from importlib import import_module
 from shutil import copy
 from functools import partial
+from importlib import reload
 
-from PyQt4.QtCore import (pyqtSlot, QSize, QSettings, QTranslator, qVersion,
-                          QCoreApplication)
-from PyQt4.QtGui import (QAction, QIcon, QMenu, QToolButton, QDockWidget,
-                         QMessageBox, QPushButton)
+from qgis.PyQt.QtCore import pyqtSlot, QSize, QSettings, QTranslator, qVersion, QCoreApplication
+from qgis.PyQt.QtWidgets import (QAction, QMenu, QToolButton, QDockWidget, 
+                                QMessageBox, QPushButton)
+from qgis.PyQt.QtGui import QIcon
 
 from qgis.core import QgsApplication
 from qgis.gui import QgsMessageBar
-from qgis.utils import plugins, QGis
-from processing.script.ScriptUtils import ScriptUtils
+from qgis.utils import plugins, Qgis
+#from processing.script import ScriptUtils
 
-import gui.settings_manager
-from gui.settings_dialog import SettingsDialog
+from .gui import settings_manager
+from .gui.settings_dialog import SettingsDialog
 
 # Get the path for the parent directory of this file.
 __location__ = os.path.realpath(
@@ -82,15 +83,15 @@ class ScriptAssistant:
         )
         config_size = settings.value("script_assistant/size")
         if config_size is None:
-            if gui.settings_manager.load_setting("current_configuration"):
+            if settings_manager.load_setting("current_configuration"):
                 pass
             else:
-                gui.settings_manager.save_setting("current_configuration", "Script Assistant")
-                gui.settings_manager.save_setting("script_folder", "")
-                gui.settings_manager.save_setting("test_folder", os.path.join(__location__, "tests"))
-                gui.settings_manager.save_setting("test_data_folder", "")
-                gui.settings_manager.save_setting("no_reload", "N")
-                gui.settings_manager.save_setting("current_test", "$ALL")
+                settings_manager.save_setting("current_configuration", "Script Assistant")
+                settings_manager.save_setting("script_folder", "")
+                settings_manager.save_setting("test_folder", os.path.join(__location__, "tests"))
+                settings_manager.save_setting("test_data_folder", "")
+                settings_manager.save_setting("no_reload", "N")
+                settings_manager.save_setting("current_test", "$ALL")
 
                 settings.beginWriteArray("script_assistant")
                 settings.setArrayIndex(0)
@@ -111,7 +112,7 @@ class ScriptAssistant:
         Creates the actions and tool button required for reloading scripts
         from a folder.
         """
-        script_folder = gui.settings_manager.load_setting("script_folder")
+        script_folder = settings_manager.load_setting("script_folder")
 
         # Reload
         self.reload_scripts_action = self.add_action(
@@ -125,14 +126,14 @@ class ScriptAssistant:
             self.iface.messageBar().pushMessage(
                 self.tr("Invalid Script Folder"),
                 self.tr("Please re-configure the script folder."),
-                level=QgsMessageBar.CRITICAL,
+                level=Qgis.Critical,
             )
 
     def create_test_tool_button(self):
         """
         Creates the actions and tool button required for running tests
         within QGIS.
-        """
+    """ 
         self.create_test_script_menu()
         self.test_tool_button = self.create_tool_button(self.test_script_menu)
         self.test_tool_button.setDefaultAction(self.test_script_action)
@@ -142,7 +143,7 @@ class ScriptAssistant:
         Creates the actions and tool button required for adding test data.
         """
 
-        test_data_folder = gui.settings_manager.load_setting("test_data_folder")
+        test_data_folder = settings_manager.load_setting("test_data_folder")
 
         # Reload
         self.add_test_data_action = self.add_action(
@@ -158,7 +159,7 @@ class ScriptAssistant:
             self.iface.messageBar().pushMessage(
                 self.tr("Invalid Test Data Folder"),
                 self.tr("Please re-configure the test data folder."),
-                level=QgsMessageBar.CRITICAL,
+                level=Qgis.Critical,
             )
 
     def create_settings_action(self):
@@ -205,7 +206,7 @@ class ScriptAssistant:
         Copies and overwrites scripts from the configured folder to the
         QGIS scripts folder.
         """
-        folder_dir = gui.settings_manager.load_setting("script_folder")
+        folder_dir = settings_manager.load_setting("script_folder")
         user_script_dir = os.path.join(
             QgsApplication.qgisSettingsDirPath(), "processing", "scripts"
         )
@@ -214,12 +215,12 @@ class ScriptAssistant:
                 if filename.endswith(".py") and not filename.startswith("_"):
                     if self.is_processing_script(os.path.join(folder_dir, filename)):
                         copy(os.path.join(folder_dir, filename), user_script_dir)
-            plugins["processing"].toolbox.updateProvider("script")
+                        QgsApplication.processingRegistry().providerById("script").refreshAlgorithms()
         else:
             self.iface.messageBar().pushMessage(
                 self.tr("No Script Folder Configured"),
                 self.tr("Please configure script folder first."),
-                level=QgsMessageBar.CRITICAL,
+                level=Qgis.Critical,
             )
 
     @staticmethod
@@ -228,16 +229,15 @@ class ScriptAssistant:
         Find the first non-blank line of the python file and ensure that it
         contains ##formatting that looks like a processing script.
         """
-        with open(filename) as lines:
-            line = lines.readline()
-            while line != "":
-                if line.startswith("##"):
-                    if line.startswith("## ") or line.startswith("###"):
-                        return False
-                    else:
-                        return True
-                else:
-                    return False
+
+        reg = (r'\s*class\s+\w+\s*\(\s*QgsProcessingAlgorithm\s*\)\:')
+
+        with open(filename, 'r') as fobj:
+            script=fobj.read()
+        
+        if re.findall(reg, script):
+            return True
+        return False
 
     def update_test_script_menu(self):
         """
@@ -249,14 +249,14 @@ class ScriptAssistant:
     def create_test_script_menu(self):
         """
         """
-        test_folder = gui.settings_manager.load_setting("test_folder")
+        test_folder = settings_manager.load_setting("test_folder")
 
         if test_folder:
             if not os.path.isdir(test_folder):
                 self.iface.messageBar().pushMessage(
                     self.tr("Invalid Test Folder"),
                     self.tr("Please reconfigure the test folder."),
-                    level=QgsMessageBar.CRITICAL,
+                    level=Qgis.Critical,
                 )
 
         self.test_actions = []
@@ -264,8 +264,8 @@ class ScriptAssistant:
             self.iface.removePluginMenu(self.tr(u"&Script Assistant"), self.test_script_action)
 
         self.test_script_action = self.add_action(
-            "test_scripts.png", "Test: {}".format(gui.settings_manager.load_setting("current_test")),
-            partial(self.prepare_test, gui.settings_manager.load_setting("current_test"))
+            "test_scripts.png", "Test: {}".format(settings_manager.load_setting("current_test")),
+            partial(self.prepare_test, settings_manager.load_setting("current_test"))
         )
         self.test_script_menu.addAction(self.test_script_action)
         self.test_all_action = self.add_action(
@@ -286,8 +286,8 @@ class ScriptAssistant:
                 )
                 self.test_script_menu.addAction(action)
 
-            if not gui.settings_manager.load_setting("current_test") in self.test_modules:
-                gui.settings_manager.save_setting("current_test", "$ALL")
+            if not settings_manager.load_setting("current_test") in self.test_modules:
+                settings_manager.save_setting("current_test", "$ALL")
                 self.test_script_action.setText("Test: all")
 
         if not test_folder or not os.path.isdir(test_folder):
@@ -326,14 +326,14 @@ class ScriptAssistant:
     def prepare_test(self, test_name):
         """Open the QGIS Python Console. Handle testing all tests."""
         self.open_python_console()
-        gui.settings_manager.save_setting("current_test", test_name)
+        settings_manager.save_setting("current_test", test_name)
         self.update_test_script_menu()
 
         if test_name:
             self.aggregated_test_result = unittest.TestResult()
             if test_name == "$ALL":
                 self.add_test_data_action.setEnabled(False)
-                test_folder = gui.settings_manager.load_setting("test_folder")
+                test_folder = settings_manager.load_setting("test_folder")
                 self.update_unique_test_modules(test_folder)
 
                 for test_module_name in self.test_modules:
@@ -341,7 +341,7 @@ class ScriptAssistant:
                     self.prepare_result(result)
             else:
                 if not self.add_test_data_action.isEnabled():
-                    test_data_folder = gui.settings_manager.load_setting("test_data_folder")
+                    test_data_folder = settings_manager.load_setting("test_data_folder")
                     if os.path.isdir(test_data_folder):
                         self.add_test_data_action.setEnabled(True)
                 result = self.run_test(test_name)
@@ -353,7 +353,7 @@ class ScriptAssistant:
             self.iface.messageBar().pushMessage(
                 self.tr("No Test Script Configured"),
                 self.tr("Please configure a script to test first."),
-                level=QgsMessageBar.CRITICAL,
+                level=Qgis.Critical,
             )
 
     def prepare_result(self, result):
@@ -371,35 +371,35 @@ class ScriptAssistant:
             self.iface.messageBar().pushMessage(
                 self.tr("No Test Summary"),
                 self.tr("Test summary could not be provided to output as the run_tests method does not return a result."),
-                level=QgsMessageBar.WARNING,
+                level=Qgis.Warning,
             )
 
     def print_aggregated_result(self):
         """Print a summary of all tests to the QGIS Python Console"""
         if self.aggregated_test_result.testsRun:
-            print ""
+            print("")
             if self.aggregated_test_result.errors:
-                print "ERRORS:\n"
+                print("ERRORS:\n")
                 for error in self.aggregated_test_result.errors:
-                    print error[0]
-                    print "-" * len(error[0].__str__())
-                    print "{0}\n".format(error[1])
+                    print(error[0])
+                    print("-" * len(error[0].__str__()))
+                    print("{0}\n".format(error[1]))
             if self.aggregated_test_result.failures:
-                print "FAILURES:\n"
+                print("FAILURES:\n")
                 for failure in self.aggregated_test_result.failures:
-                    print failure[0]
-                    print "-" * len(failure[0].__str__())
-                    print "{0}\n".format(failure[1])
+                    print(failure[0])
+                    print("-" * len(failure[0].__str__()))
+                    print("{0}\n".format(failure[1]))
             if self.aggregated_test_result.unexpectedSuccesses:
-                print "UNEXPECTED SUCCESSES:\n"
+                print("UNEXPECTED SUCCESSES:\n")
                 for unexpected in self.aggregated_test_result.unexpectedSuccesses:
-                    print unexpected
-                print ""
+                    print(unexpected)
+                print("")
             if self.aggregated_test_result.skipped:
-                print "SKIPPED:\n"
+                print("SKIPPED:\n")
                 for skip in self.aggregated_test_result.skipped:
-                    print "{0} - {1}".format(skip[0], skip[1])
-                print ""
+                    print("{0} - {1}".format(skip[0], skip[1]))
+                print("")
 
             successes = self.aggregated_test_result.testsRun - (
                 len(self.aggregated_test_result.errors) +
@@ -422,27 +422,27 @@ class ScriptAssistant:
             self.print_table_row(
                 "Skipped", len(self.aggregated_test_result.skipped))
 
-            print """+===========================+============+
+            print("""+===========================+============+
 | Total                     |       {total: >{fill}} |
 +---------------------------+------------+
             """.format(
                 total=self.aggregated_test_result.testsRun,
                 fill='4'
-            )
+            ))
 
         else:
-            print "\nNo tests were run.\n"
+            print("\nNo tests were run.\n")
 
     @staticmethod
     def print_table_row(result_type, count):
         if count:
-            print """+---------------------------+------------+
+            print("""+---------------------------+------------+
 | {result_type: <{text_fill}} | {count: >{count_fill}} |""".format(
                 result_type=result_type,
                 text_fill='25',
                 count=count,
                 count_fill='10'
-            )
+            ))
 
     def open_python_console(self):
         """Ensures that the QGIS Python Console is visible to the user."""
@@ -466,7 +466,7 @@ class ScriptAssistant:
         """
         module = import_module(test_name)
         # have to reload otherwise a QGIS restart is required after changes
-        if gui.settings_manager.load_setting("no_reload") == "Y":
+        if settings_manager.load_setting("no_reload") == "Y":
             pass
         else:
             reload(module)
@@ -479,14 +479,14 @@ class ScriptAssistant:
         """Adds test data referred to in the test script to the map. Must
         be .shp (shapefile).
         """
-        test_data_folder = gui.settings_manager.load_setting("test_data_folder")
-        test_folder = gui.settings_manager.load_setting("test_folder")
-        current_test = gui.settings_manager.load_setting("current_test")
+        test_data_folder = settings_manager.load_setting("test_data_folder")
+        test_folder = settings_manager.load_setting("test_folder")
+        current_test = settings_manager.load_setting("current_test")
         if current_test == "$ALL":
             self.iface.messageBar().pushMessage(
                 self.tr("Select a Single Test"),
                 self.tr("Cannot add test data for all tests."),
-                level=QgsMessageBar.WARNING,
+                level=Qgis.Warning,
             )
             return
         test_file = open(os.path.join(test_folder, "test_{}.py".format(current_test)), "r")
@@ -505,7 +505,7 @@ class ScriptAssistant:
         self.dlg_settings.show()
         self.dlg_settings.populate_config_combo()
 
-        if gui.settings_manager.load_setting("current_configuration"):
+        if settings_manager.load_setting("current_configuration"):
             self.dlg_settings.show_last_configuration()
             self.dlg_settings.check_changes()
 
@@ -538,7 +538,7 @@ class ScriptAssistant:
     def save_settings(self):
         """Save current settings to Project file and config."""
         script_folder = self.dlg_settings.lne_script.text()
-        gui.settings_manager.save_setting("script_folder", script_folder)
+        settings_manager.save_setting("script_folder", script_folder)
         if os.path.exists(script_folder):
             self.reload_scripts_action.setText("Reload: {}".format(script_folder))
             self.reload_scripts_action.setEnabled(True)
@@ -549,13 +549,13 @@ class ScriptAssistant:
                 self.iface.messageBar().pushMessage(
                     self.tr("Invalid Script Folder Path"),
                     self.tr("The configured script folder is not a valid path."),
-                    level=QgsMessageBar.CRITICAL,
+                    level=Qgis.Critical,
                 )
 
         test_folder = self.dlg_settings.lne_test.text()
-        gui.settings_manager.save_setting("test_folder", test_folder)
+        settings_manager.save_setting("test_folder", test_folder)
         if os.path.exists(test_folder):
-            gui.settings_manager.save_setting("current_test", "$ALL")
+            settings_manager.save_setting("current_test", "$ALL")
             self.test_script_action.setEnabled(True)
             self.test_all_action.setEnabled(True)
             if test_folder not in sys.path:
@@ -570,11 +570,11 @@ class ScriptAssistant:
                 self.iface.messageBar().pushMessage(
                     self.tr("Invalid Test Script Path"),
                     self.tr("The configured test script folder is not a valid path."),
-                    level=QgsMessageBar.CRITICAL,
+                    level=Qgis.Critical,
                 )
 
         test_data_folder = self.dlg_settings.lne_test_data.text()
-        gui.settings_manager.save_setting("test_data_folder", test_data_folder)
+        settings_manager.save_setting("test_data_folder", test_data_folder)
         if os.path.exists(test_data_folder):
             self.add_test_data_action.setText("Add Test Data From: {}".format(test_data_folder))
             self.add_test_data_action.setEnabled(True)
@@ -585,16 +585,16 @@ class ScriptAssistant:
                 self.iface.messageBar().pushMessage(
                     self.tr("Invalid Test Data Path"),
                     self.tr("The configured test data folder is not a valid path."),
-                    level=QgsMessageBar.CRITICAL,
+                    level=Qgis.Critical,
                 )
 
         if self.dlg_settings.chk_reload.isChecked():
-            gui.settings_manager.save_setting("no_reload", "Y")
+            settings_manager.save_setting("no_reload", "Y")
         else:
-            gui.settings_manager.save_setting("no_reload", "N")
+            settings_manager.save_setting("no_reload", "N")
 
         if self.dlg_settings.cmb_config.lineEdit().text():
-            gui.settings_manager.save_setting(
+            settings_manager.save_setting(
                 "current_configuration",
                 self.dlg_settings.cmb_config.lineEdit().text()
             )

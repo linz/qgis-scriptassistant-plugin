@@ -2,8 +2,11 @@
 
 import os
 
-from PyQt4.QtCore import QSettings
+
+from qgis.PyQt.QtCore import QSettings
 from qgis.core import QgsProject, QgsApplication
+
+
 
 
 def save_setting(setting_name, setting_value):
