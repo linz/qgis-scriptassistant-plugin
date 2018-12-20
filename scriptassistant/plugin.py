@@ -304,6 +304,11 @@ class ScriptAssistant:
 
         all_test_modules = []
         for t in self.test_cases:
+            # tests with failed imports = type==<class 'unittest.loader._FailedTest'>
+            # therefore if exception we must get at the test methods name
+            if hasattr(t, '_exception'):
+                all_test_modules.append(t._testMethodName)
+                continue
             all_test_modules.append(type(t).__module__)
         unique_test_modules = list(set(all_test_modules))
         self.test_modules = unique_test_modules
