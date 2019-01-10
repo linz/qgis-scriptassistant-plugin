@@ -87,7 +87,7 @@ class ScriptAssistantSettingsTest(unittest.TestCase):
         self.scriptassistant.save_settings()
         self.dlg.close()
         for action in self.scriptassistant.test_actions:
-            if action.text() == "add_area_column":
+            if action.text() == "test_add_area_column":
                 action.triggered.emit(True)
         self.dlg.show()
         self.dlg.populate_config_combo()

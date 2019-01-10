@@ -200,7 +200,7 @@ class ScriptAssistant:
         self.toolbar.addWidget(tool_button)
         return tool_button
 
-    @pyqtSlot()
+    # @pyqtSlot() //TODO: resulting in sig/slot conn issue
     def reload_scripts(self):
         """
         Copies and overwrites scripts from the configured folder to the
@@ -327,7 +327,7 @@ class ScriptAssistant:
                 # confirmed suite
                 self.update_all_test_cases(test_or_suite)
 
-    @pyqtSlot()
+    #@pyqtSlot()
     def prepare_test(self, test_name):
         """Open the QGIS Python Console. Handle testing all tests."""
         self.open_python_console()
@@ -479,7 +479,7 @@ class ScriptAssistant:
         result = unittest.TextTestRunner(verbosity=2, stream=sys.stdout).run(suite)
         return result
 
-    @pyqtSlot()
+    #@pyqtSlot()
     def add_test_data_to_map(self):
         """Adds test data referred to in the test script to the map. Must
         be .shp (shapefile).
@@ -504,7 +504,7 @@ class ScriptAssistant:
                 match, "ogr"
             )
 
-    @pyqtSlot()
+    #@pyqtSlot()
     def open_settings_dialog(self):
         """Open the settings dialog and show the current configuration."""
         self.dlg_settings.show()
