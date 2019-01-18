@@ -4,6 +4,16 @@ Change Log
 
 All notable changes to this project will be documented in this file.
 
+
+Unreleased (1.0.0) - 2019-\*\*-\*\*
+===================================
+
+Changed
+-------
+
+ * Source code and tests upgraded to QGIS3 API
+
+
 Unreleased
 ==========
 
